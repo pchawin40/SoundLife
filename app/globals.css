@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-ink text-cream antialiased;
+  overscroll-behavior-y: none;
+}
+
+::selection {
+  background: rgba(0, 137, 123, 0.4);
+}
