@@ -90,6 +90,12 @@ export interface Song {
   moods?: string[];
   era?: string | null;
   platforms: SongPlatforms;
+  /** External stream-only preview URL, e.g. iTunes previewUrl. Never cached. */
+  previewUrl?: string | null;
+  /** External artwork URL, hotlinked from the catalog provider. */
+  artworkUrl?: string | null;
+  /** External iTunes track id returned by the iTunes Search API. */
+  itunesTrackId?: string | null;
   traits: TraitScores;
   scenarios: ScenarioId[];
   chips: ReasonChip[];
@@ -200,3 +206,25 @@ export interface ResultData {
 }
 
 export type Step = "landing" | "scenario" | "swipe";
+
+export type IdentityRarity = "common" | "uncommon" | "rare" | "legendary";
+
+export interface SoundLifeCollectionItem {
+  id: string;
+  identity: string;
+  archetypeId: string;
+  scenarioId: ScenarioId;
+  discoveredAt: string;
+  topTraits: Trait[];
+  matchPercent: number;
+  rarity: IdentityRarity;
+  sharePath: string;
+}
+
+export interface SoundLifeProfileState {
+  currentStreak: number;
+  maxStreak: number;
+  lastPlayedDate: string | null;
+  totalIdentities: number;
+  collection: SoundLifeCollectionItem[];
+}

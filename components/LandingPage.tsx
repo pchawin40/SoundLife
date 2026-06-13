@@ -2,14 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import CollectionGrid from "./CollectionGrid";
+import StreakBadge from "./StreakBadge";
+import { getStorageJson } from "@/lib/storage";
+import { EMPTY_PROFILE_STATE } from "@/lib/streak";
 import {
   resolveVibeTags,
   resolveVibeVisual,
   type VibeVisualInput,
 } from "@/lib/vibeVisuals";
+import type { SoundLifeProfileState } from "@/lib/types";
 
 interface LandingPageProps {
   onStart: () => void;
+  onChooseScene?: () => void;
 }
 
 const VIRAL_LINES = [
@@ -197,8 +203,9 @@ const STEPS = [
   { eyebrow: "03 Get the identity", copy: "A shareable card, a tracklist, a music identity." },
 ];
 
-export default function LandingPage({ onStart }: LandingPageProps) {
+export default function LandingPage({ onStart, onChooseScene }: LandingPageProps) {
   const [lineIndex, setLineIndex] = useState(0);
+  const [profile, setProfile] = useState<SoundLifeProfileState>(EMPTY_PROFILE_STATE);
 
   useEffect(() => {
     const timer = window.setInterval(
@@ -206,6 +213,10 @@ export default function LandingPage({ onStart }: LandingPageProps) {
       2800
     );
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    setProfile(getStorageJson("profile", EMPTY_PROFILE_STATE));
   }, []);
 
   return (
@@ -232,7 +243,7 @@ export default function LandingPage({ onStart }: LandingPageProps) {
           {/* Subline */}
           <p className="mt-6 max-w-xl text-lg font-semibold leading-8 text-muted sm:text-xl">
             Swipe a few instincts. Get a music identity, a shareable card, and a tracklist that
-            sounds less algorithmic and more like "that is unfortunately me."
+            sounds less algorithmic and more like &quot;that is unfortunately me.&quot;
           </p>
 
           {/* Rotating quip */}
@@ -260,8 +271,17 @@ export default function LandingPage({ onStart }: LandingPageProps) {
               whileTap={{ scale: 0.97 }}
               className="min-h-[58px] rounded-full bg-ink px-8 text-base font-black text-white shadow-card-lg transition-colors hover:bg-gray-800"
             >
-              Swipe my vibe →
+              Sound of the Day →
             </motion.button>
+            {onChooseScene && (
+              <button
+                type="button"
+                onClick={onChooseScene}
+                className="min-h-[58px] rounded-full border border-gray-200 bg-white px-6 text-sm font-black text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+              >
+                Choose a scene
+              </button>
+            )}
             <p className="text-sm font-medium text-gray-400">
               No account. No history. 30 seconds.
             </p>
@@ -309,6 +329,13 @@ export default function LandingPage({ onStart }: LandingPageProps) {
               ))}
             </div>
           </div>
+
+          {profile.totalIdentities > 0 && (
+            <div className="mt-7 grid gap-3 sm:grid-cols-[0.78fr_1.22fr]">
+              <StreakBadge profile={profile} compact />
+              <CollectionGrid items={profile.collection} limit={3} />
+            </div>
+          )}
         </motion.section>
 
         {/* Right: mock swipe preview */}

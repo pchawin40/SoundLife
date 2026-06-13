@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import CollectionGrid from "./CollectionGrid";
 import ShareResultCard from "./ShareResultCard";
 import SongCard from "./SongCard";
+import StreakBadge from "./StreakBadge";
 import TraitBar from "./TraitBar";
 import { TRAIT_META, TRAIT_VERDICTS } from "@/lib/data";
 import { getFilter } from "@/lib/engine";
+import { encodeResultParams } from "@/lib/match";
 import { buildShareText, copyToClipboard } from "@/lib/share";
 import { getPlatformLinks } from "@/lib/platforms";
-import type { Catalog, ResultData, Song } from "@/lib/types";
+import { getStorageJson, setStorageJson } from "@/lib/storage";
+import {
+  EMPTY_PROFILE_STATE,
+  makeCollectionItem,
+  updateSoundLifeProfile,
+} from "@/lib/streak";
+import type { Catalog, ResultData, Song, SoundLifeProfileState } from "@/lib/types";
 
 interface ResultsScreenProps {
   result: ResultData;
@@ -175,6 +184,8 @@ function PlaylistMode({ result }: { result: ResultData }) {
 export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreenProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [showPlaylist, setShowPlaylist] = useState(false);
+  const [profile, setProfile] = useState<SoundLifeProfileState>(EMPTY_PROFILE_STATE);
+  const savedResult = useRef<string | null>(null);
   const scenario = catalog.scenarios.find((s) => s.id === result.scenarioId);
   const filter = getFilter(result.filterId);
   const verdict = TRAIT_VERDICTS[result.traits[0].trait];
@@ -187,9 +198,39 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    setProfile(getStorageJson("profile", EMPTY_PROFILE_STATE));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sharePath = `${window.location.pathname}${window.location.search}`;
+    const saveKey = `${result.identity}:${sharePath}`;
+    if (savedResult.current === saveKey) return;
+    savedResult.current = saveKey;
+
+    const current = getStorageJson("profile", EMPTY_PROFILE_STATE);
+    const item = makeCollectionItem(result, sharePath);
+    const next = updateSoundLifeProfile(current, item.discoveredAt, item);
+    setProfile(next);
+    setStorageJson("profile", next);
+  }, [result]);
+
   const handleCopyShare = async () => {
-    const ok = await copyToClipboard(buildShareText(result));
+    const shareUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}${window.location.pathname}${window.location.search}`
+        : "/result";
+    const ok = await copyToClipboard(buildShareText(result, shareUrl));
     setToast(ok ? "Copied to clipboard ✓" : "Couldn't copy — try a screenshot!");
+  };
+
+  const handleCompare = async () => {
+    if (typeof window === "undefined") return;
+    const encoded = encodeResultParams(window.location.search);
+    const url = `${window.location.origin}/match?a=${encodeURIComponent(encoded)}`;
+    const ok = await copyToClipboard(url);
+    setToast(ok ? "Friend compare link copied ✓" : "Couldn't copy compare link");
   };
 
   const handleCopyPlaylist = async (name: string) => {
@@ -245,7 +286,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
               style={{ borderColor: topTrait.color }}
             >
               <p className="text-sm font-black italic leading-6 text-ink">
-                "{verdict}"
+                &quot;{verdict}&quot;
               </p>
             </div>
           </motion.div>
@@ -291,13 +332,20 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
           </section>
 
           {/* CTA buttons */}
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <button
               type="button"
               onClick={handleCopyShare}
               className="min-h-[54px] rounded-full bg-ink px-5 text-sm font-black text-white shadow-card transition-colors hover:bg-gray-800 active:scale-95"
             >
-              Copy my SoundLife
+              Copy result
+            </button>
+            <button
+              type="button"
+              onClick={handleCompare}
+              className="min-h-[54px] rounded-full border border-brand-teal/20 bg-brand-teal/10 px-5 text-sm font-black text-brand-teal transition-colors hover:bg-brand-teal/15 active:scale-95"
+            >
+              Compare with a friend
             </button>
             <button
               type="button"
@@ -307,6 +355,11 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
               Redo vibe
             </button>
           </div>
+
+          <section className="mt-6 grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
+            <StreakBadge profile={profile} />
+            <CollectionGrid items={profile.collection} />
+          </section>
 
           {/* Sound profile */}
           <section className="mt-10">
@@ -394,7 +447,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
               </div>
             ) : (
               <p className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 text-sm text-gray-500">
-                Hmm, no tracks matched that combination. Hit "Redo vibe" and try another mix.
+                Hmm, no tracks matched that combination. Hit &quot;Redo vibe&quot; and try another mix.
               </p>
             )}
           </section>

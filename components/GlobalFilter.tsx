@@ -82,7 +82,9 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
             );
           })}
           {filtered.length === 0 && (
-            <p className="py-2 text-sm text-gray-400">No matches for "{query}"</p>
+            <p className="py-2 text-sm text-gray-400">
+              No matches for &quot;{query}&quot;
+            </p>
           )}
         </div>
       </div>

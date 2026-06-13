@@ -8,7 +8,9 @@ import ScenarioPicker from "@/components/ScenarioPicker";
 import SwipeDeck from "@/components/SwipeDeck";
 import { FALLBACK_CATALOG } from "@/lib/catalog.fallback";
 import { loadCatalog } from "@/lib/catalog";
+import { getDailyPrompt } from "@/lib/daily";
 import { buildDeck } from "@/lib/engine";
+import { encodeResultParams } from "@/lib/match";
 import type {
   Catalog,
   FilterId,
@@ -37,6 +39,17 @@ export default function Home() {
     setStep("swipe");
   };
 
+  const startDaily = () => {
+    const daily = getDailyPrompt();
+    const next =
+      catalog.scenarios.find((item) => item.id === daily.scenarioId) ??
+      catalog.scenarios[0];
+    if (!next) return;
+    setScenario(next);
+    setDeck(buildDeck(catalog, next, daily.seed));
+    setStep("swipe");
+  };
+
   const finishSwipe = (
     liked: VibeCardData[],
     superVibed: VibeCardData[],
@@ -50,6 +63,14 @@ export default function Home() {
     if (disliked.length > 0) params.set("nope", disliked.map((c) => c.id).join(","));
     if (filter !== "global") params.set("lang", filter);
     if (roastIntensity !== "accurate") params.set("tone", roastIntensity);
+    const friendSeed =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("match")
+        : null;
+    if (friendSeed) {
+      router.push(`/match?a=${encodeURIComponent(friendSeed)}&b=${encodeURIComponent(encodeResultParams(params))}`);
+      return;
+    }
     router.push(`/result?${params.toString()}`);
   };
 
@@ -94,7 +115,10 @@ export default function Home() {
             className="flex w-full flex-1 flex-col"
           >
             {step === "landing" && (
-              <LandingPage onStart={() => setStep("scenario")} />
+              <LandingPage
+                onStart={startDaily}
+                onChooseScene={() => setStep("scenario")}
+              />
             )}
             {step === "scenario" && (
               <ScenarioPicker
