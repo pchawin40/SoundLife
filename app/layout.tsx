@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundlife.app"),
   title: "SoundLife — A soundtrack for every part of your day",
   description:
     "Pick a moment, swipe a few vibe cards, and find real music that fits you. No account. No listening history. Just your vibe.",

@@ -15,6 +15,9 @@ layer for catalog freshness and anonymous analytics.
 ```bash
 npm install
 npm run dev        # http://localhost:3000
+npm run typecheck  # TypeScript
+npm run test       # Vitest pure-logic tests
+npm run lint       # Next lint
 npm run build      # static export → ./out
 ```
 
@@ -37,9 +40,9 @@ vars the app builds, runs, and recommends from the bundled catalog.
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run `supabase/schema.sql` (tables, indexes, RLS).
-3. Run `supabase/seed.sql` (68 starter songs across English, Spanish, Korean,
+3. Run `supabase/seed.sql` (starter songs across English, Spanish, Korean,
    Japanese, Hindi, Punjabi, Portuguese, French, Afrobeats/amapiano, Arabic,
-   Thai and more, plus vibe cards, scenarios, and catalog version 2).
+   Thai and more, plus vibe cards, scenarios, and the catalog version row).
 4. Put the project URL + anon key in `.env.local` and rebuild.
 
 Security model (enforced by RLS in `schema.sql`):
@@ -66,6 +69,23 @@ starter set, edit `lib/catalog.fallback.ts` and regenerate the seed:
 npx tsx scripts/generate-seed.ts
 ```
 
+### Scheduled iTunes metadata refresh
+
+`scripts/refresh-catalog.ts` can enrich catalog rows with iTunes Search API
+metadata: `preview_url`, `artwork_url`, and `itunes_track_id`. It is intended
+for CI only and is disabled unless `ENABLE_CATALOG_REFRESH=true`.
+
+Required GitHub secrets for `.github/workflows/refresh-catalog.yml`:
+
+- `ENABLE_CATALOG_REFRESH=true`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+The service-role key is never used in the browser and must never be committed
+or exposed with a `NEXT_PUBLIC_` prefix. The script throttles iTunes requests
+to under 20/min and stores only returned metadata/URLs. It does not download or
+cache audio or artwork.
+
 ## How the hybrid catalog works (fallback mode)
 
 ```
@@ -83,7 +103,7 @@ render instantly ──► bundled fallback catalog (lib/catalog.fallback.ts)
 - If Supabase is missing, misconfigured, or down, nothing breaks — the app is
   indistinguishable from fallback mode.
 - Payloads stay small: selected columns only, `is_active` filter, 500-row cap,
-  no artwork blobs.
+  no artwork blobs. Artwork and previews are hotlinked provider URLs.
 - Analytics inserts are fire-and-forget and never block navigation.
 
 ## Platform links (no OAuth, no playback)
@@ -93,6 +113,10 @@ to Spotify / YouTube Music / Apple Music. Verified URLs from the catalog are
 used when present; otherwise `lib/platforms.ts` builds search links — we never
 invent track IDs. Apple links carry `app=music`, the affiliate token (`at`),
 and a campaign (`ct=soundlife`). Outbound taps are logged anonymously.
+
+When a catalog row has `preview_url`, SoundLife can stream that short external
+preview after a user taps play. iTunes previews are stream-only, never cached,
+and are labeled "provided courtesy of iTunes" near the control.
 
 ## Shareable results
 
@@ -107,6 +131,30 @@ and work offline-ish. "Save / share this card" renders a 1080×1080 PNG via
 plain Canvas 2D (no DOM-capture library) and uses the Web Share API with a
 download fallback — both Capacitor-friendly.
 
+Share text includes the music identity, emoji trait bars, top songs, and the
+same reproducible `/result?...` link. The result screen also creates a
+`/match?a=...` handoff link so a friend can add their own result and see aux
+compatibility.
+
+## Daily streaks, collection, and match mode
+
+`/daily` uses a deterministic UTC date seed to pick the same Sound of the Day
+for everyone. Streaks and discovered identities are stored only in namespaced
+localStorage. One missed day pauses the streak; more than one missed day starts
+a new streak. Collection rarity is derived deterministically from the top trait
+combo and match percentage.
+
+`/match` reads compact encoded result params, recomputes both results
+client-side from the catalog, and compares trait vectors. No backend, auth, or
+account state is involved.
+
+## Static OG images
+
+`npm run build` runs `npm run generate:og` first. The build-time script writes
+scenario and archetype OG PNGs into `public/og/`. Arbitrary per-result OG
+images are intentionally approximated by scenario/identity-level images because
+the app uses `output: "export"` and cannot render request-time OG images.
+
 ## Global Mode
 
 A language/scene filter (Global, English, Spanish, Korean, Japanese, Hindi,
@@ -116,11 +164,15 @@ and the global ranking backfills, so results are never empty.
 
 ## Recommendation logic (client-side, deterministic)
 
-Vibe cards carry weights across 11 traits. Right-swipes accumulate traits on
-top of the scenario's base traits; every catalog song is scored by trait
-affinity + a scenario bonus + a small popularity tiebreaker, then sorted
-deterministically. Identity names come from a rule table keyed on
-scenario + top traits with a compositional fallback.
+Vibe cards carry weights across 11 traits. Right-swipes and Super Vibes
+accumulate traits on top of the scenario's base traits; rejected cards and
+blocked genres shape the penalties. Every catalog song is scored by trait
+affinity + scenario bonus + card genre/language/region signals + a small
+popularity tiebreaker, then sorted deterministically.
+
+The result identity comes from `lib/archetypes.ts`: 20+ personality-style music
+diagnoses with soft, accurate, and roast copy, screenshot-friendly captions,
+aux warnings, and visual themes.
 
 ## Mobile / Capacitor constraints
 
@@ -129,22 +181,25 @@ scenario + top traits with a compositional fallback.
   catalog fetches degrade silently offline.
 - The share card renders via Canvas, not DOM capture, so it works in a
   WebView.
-- No copyrighted audio is stored or played; no artwork is fetched from
-  Supabase Storage.
+- No copyrighted audio is stored. External preview URLs are streamed only after
+  a user action; artwork URLs are hotlinked and never cached in Supabase
+  Storage.
 
 ## Project structure
 
 ```
-app/              layout, page (landing → scenario → swipe), result/ (shareable results)
+app/              layout, page (landing → scenario → swipe), daily/, match/,
+                  result/ (shareable results)
 components/       LandingPage, ScenarioPicker, GlobalFilter, SwipeDeck, VibeCard,
                   BuildingScreen, ResultsScreen, ShareResultCard, SongCard,
-                  TraitBar, PlatformButtons
+                  TraitBar, PlatformButtons, StreakBadge, CollectionGrid
 lib/              types, data (editorial: traits/identities/filters),
                   catalog.fallback (bundled catalog), catalog (SWR + merge),
-                  engine (scoring), platforms (deep links), analytics,
+                  archetypes, daily, streak, storage, match, engine (scoring),
+                  platforms (deep links), analytics, audio, haptics,
                   share (text + canvas card), supabaseClient
 supabase/         schema.sql (tables + RLS + indexes), seed.sql (generated)
-scripts/          generate-seed.ts (fallback catalog → seed.sql)
+scripts/          generate-seed.ts, generate-og.ts, refresh-catalog.ts
 ```
 
 ## Stack
