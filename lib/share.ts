@@ -1,27 +1,36 @@
 import { TRAIT_META } from "./data";
-import type { ResultData, ShareCardVariant } from "./types";
+import type { ResultData, ShareCardVariant, TraitStat } from "./types";
 
-export function buildShareText(result: ResultData): string {
+function traitBar(stat: TraitStat): string {
+  const filled = Math.max(1, Math.min(5, Math.round(stat.percent / 20)));
+  return `${"🟩".repeat(filled)}${"⬜".repeat(5 - filled)}`;
+}
+
+export function buildShareText(result: ResultData, shareUrl = "/result"): string {
   const traits = result.traits
     .slice(0, 3)
-    .map((s) => `${TRAIT_META[s.trait].label} ${s.percent}`)
-    .join(" · ");
+    .map((s) => `${TRAIT_META[s.trait].emoji} ${TRAIT_META[s.trait].label} ${traitBar(s)} ${s.percent}%`)
+    .join("\n");
   const songs = result.songs
     .slice(0, 3)
-    .map((s) => s.title)
-    .join(", ");
+    .map((s, i) => `${i + 1}. ${s.title} - ${s.artist}`)
+    .join("\n");
   return [
     result.archetype.shareCaption,
     `${result.identity} · ${result.matchPercent}% match`,
+    "",
     traits,
-    `Top songs: ${songs}`,
-    "Try yours: SoundLife",
+    "",
+    "Top songs:",
+    songs,
+    "",
+    `Try yours: ${shareUrl}`,
   ].join("\n");
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    if (navigator.clipboard?.writeText) {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
       return true;
     }
@@ -29,6 +38,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     // fall through to the legacy path
   }
   try {
+    if (typeof document === "undefined") return false;
     const textarea = document.createElement("textarea");
     textarea.value = text;
     textarea.style.position = "fixed";
