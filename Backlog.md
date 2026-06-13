@@ -48,3 +48,5 @@
 
 - Arbitrary per-result OG images cannot be generated at request time with `output: "export"`. Use scenario/archetype-level approximations generated during `prebuild`.
 - Vibe cards do not currently carry track-level `preview_url`; audio previews can only appear where a `Song` is present unless the catalog later adds card preview metadata.
+- YouTube playlist creation remains backlog. It requires Google OAuth, YouTube Data API `playlists.insert` and `playlistItems.insert`, plus either `youtube_video_id` for every song or a conservative search/matching step.
+- YouTube Music playlist creation is not as clean as Spotify playlist creation. Build and harden Spotify first, then decide whether YouTube Data API export is worth the OAuth/API complexity.

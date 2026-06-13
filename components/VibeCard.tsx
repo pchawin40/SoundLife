@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
-import { resolveVibeTags, resolveVibeVisual, type VibeVisual } from "@/lib/vibeVisuals";
+import { getCardVisual, resolveVibeTags, type CardVisual } from "@/lib/cardVisuals";
 import type { CardType, VibeCardData } from "@/lib/types";
 
 interface VibeCardProps {
@@ -53,18 +54,113 @@ const cardVariants = {
   }),
 };
 
-function EditorialFallbackVisual({ visual }: { visual: VibeVisual }) {
+function ThemeFallbackVisual({ visual }: { visual: CardVisual }) {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 opacity-90" style={{ background: visual.background }} />
-      <div className="absolute -left-16 top-10 h-52 w-52 rounded-full bg-white/20 blur-3xl" />
-      <div className="absolute right-7 top-12 h-52 w-32 rotate-6 rounded-[34px] bg-white/20 shadow-[0_24px_80px_rgba(15,23,42,0.2)] backdrop-blur-sm" />
-      <div className="absolute bottom-8 left-8 h-44 w-28 -rotate-6 rounded-t-full bg-black/25 shadow-[0_24px_60px_rgba(15,23,42,0.24)]" />
+      <div className="absolute inset-0" style={{ background: visual.background }} />
+      {visual.texture && (
+        <div
+          className="absolute inset-0 opacity-25 mix-blend-soft-light"
+          style={{ backgroundImage: visual.texture }}
+        />
+      )}
+      {visual.pattern && (
+        <div
+          className="absolute inset-0 opacity-25"
+          style={{
+            backgroundImage: visual.pattern,
+            backgroundSize: "24px 24px",
+          }}
+        />
+      )}
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18)_0%,transparent_38%,rgba(0,0,0,0.16)_100%)]" />
       <div
-        className="absolute bottom-16 right-9 h-24 w-24 rounded-full border border-white/35 bg-white/20 backdrop-blur-sm"
-        style={{ boxShadow: `0 0 80px ${visual.accent}66` }}
+        className="absolute inset-x-5 bottom-5 h-20 rounded-[22px] border border-white/20 bg-white/10"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgba(255,255,255,0.20), rgba(255,255,255,0.04))",
+        }}
       />
-      <div className="absolute inset-x-8 bottom-9 h-px bg-white/40" />
+      <div
+        className="absolute right-5 top-5 h-16 w-24 rounded-[18px] border border-white/20 bg-white/10"
+        style={{ boxShadow: `inset 0 0 0 1px ${visual.accent}44` }}
+      />
+      <div
+        className="absolute left-5 top-8 h-2 w-24 rounded-full opacity-70"
+        style={{ backgroundColor: visual.accent }}
+      />
+    </div>
+  );
+}
+
+function CardImagePanel({
+  cardId,
+  visual,
+  typeLabel,
+  typeLabelColor,
+}: {
+  cardId: string;
+  visual: CardVisual;
+  typeLabel: string | null;
+  typeLabelColor: string;
+}) {
+  const candidates = useMemo(
+    () =>
+      [visual.imageUrl, visual.legacyImageUrl].filter((url): url is string => Boolean(url)),
+    [visual.imageUrl, visual.legacyImageUrl]
+  );
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [cardId, visual.imageUrl, visual.legacyImageUrl]);
+
+  const activeUrl = candidates[activeIndex];
+
+  return (
+    <div className="relative h-[68%] overflow-hidden">
+      {activeUrl ? (
+        <>
+          {/* Native img enables jpg -> legacy png -> gradient fallback chain */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={activeUrl}
+            alt={visual.imageAlt ?? ""}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              imageRendering: "auto",
+              objectFit: "cover",
+              objectPosition: visual.imagePosition ?? "center",
+            }}
+            onError={() => {
+              if (process.env.NODE_ENV !== "production") {
+                console.warn("[SoundLife card image missing]", cardId, activeUrl);
+              }
+              setActiveIndex((index) => index + 1);
+            }}
+          />
+          <div className="absolute inset-0 opacity-45" style={{ backgroundImage: visual.overlay }} />
+        </>
+      ) : (
+        <ThemeFallbackVisual visual={visual} />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent" />
+
+      {typeLabel && (
+        <span
+          className="absolute left-4 top-4 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] shadow-sm backdrop-blur-md"
+          style={{
+            backgroundColor: "rgba(255,255,255,0.82)",
+            color: typeLabelColor,
+            border: `1px solid ${typeLabelColor}24`,
+          }}
+        >
+          {typeLabel}
+        </span>
+      )}
+      <span className="absolute right-4 top-4 rounded-full border border-white/35 bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm backdrop-blur-md">
+        {visual.eyebrow}
+      </span>
     </div>
   );
 }
@@ -85,7 +181,7 @@ export default function VibeCard({
   const stickerScale = useTransform(x, [-300, 0, 300], [1.03, 0.94, 1.03]);
 
   const isTop = stackPosition === 0;
-  const visual = resolveVibeVisual(card);
+  const visual = getCardVisual(card);
   const tags = resolveVibeTags(card, visual);
   const typeLabel = card.cardType ? TYPE_LABELS[card.cardType] : null;
   const typeLabelColor = card.cardType ? TYPE_LABEL_COLORS[card.cardType] : "#374151";
@@ -97,13 +193,6 @@ export default function VibeCard({
     opacity: stackPosition > 2 ? 0 : 1,
     transition: { type: "spring" as const, stiffness: 210, damping: 28, mass: 0.95 },
   };
-  const visualStyle = visual.imageUrl
-    ? {
-        backgroundImage: `${visual.overlay}, url(${visual.imageUrl})`,
-        backgroundPosition: visual.imagePosition ?? "center",
-        backgroundSize: "cover",
-      }
-    : { background: visual.background };
 
   return (
     <motion.div
@@ -135,32 +224,14 @@ export default function VibeCard({
         }
       }}
     >
-      {/* Card body */}
       <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[30px] bg-white shadow-card-lg ring-1 ring-black/[0.04]">
-        {/* Editorial image area */}
-        <div className="relative h-[68%] overflow-hidden" style={visualStyle}>
-          {!visual.imageUrl && <EditorialFallbackVisual visual={visual} />}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-white/5" />
+        <CardImagePanel
+          cardId={card.id}
+          visual={visual}
+          typeLabel={typeLabel}
+          typeLabelColor={typeLabelColor}
+        />
 
-          {/* Card type label */}
-          {typeLabel && (
-            <span
-              className="absolute left-4 top-4 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] shadow-sm backdrop-blur-md"
-              style={{
-                backgroundColor: "rgba(255,255,255,0.82)",
-                color: typeLabelColor,
-                border: `1px solid ${typeLabelColor}24`,
-              }}
-            >
-              {typeLabel}
-            </span>
-          )}
-          <span className="absolute right-4 top-4 rounded-full border border-white/35 bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm backdrop-blur-md">
-            {visual.eyebrow}
-          </span>
-        </div>
-
-        {/* Bottom content */}
         <div className="flex h-[32%] min-h-0 flex-col items-start justify-between gap-2.5 px-5 pb-9 pt-4 text-left sm:px-6 sm:pt-5">
           <div className="min-h-0 w-full">
             <h3 className="line-clamp-2 text-[24px] font-black leading-[1.02] tracking-tight text-gray-950 sm:text-[28px]">
@@ -188,7 +259,6 @@ export default function VibeCard({
           </div>
         </div>
 
-        {/* Hint bar */}
         {isTop && (
           <div className="absolute bottom-3 left-0 right-0 flex items-center justify-between px-6 text-[9px] font-black uppercase tracking-[0.18em] text-gray-300">
             <span>← Nope</span>
@@ -198,7 +268,6 @@ export default function VibeCard({
         )}
       </div>
 
-      {/* Sticker overlays — only on top card */}
       {isTop && (
         <>
           <motion.span

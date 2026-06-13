@@ -129,7 +129,7 @@ async function fetchRemoteCatalog(version: number): Promise<Catalog | null> {
     supabase
       .from("songs")
       .select(
-        "id,title,artist,language,region,country,genres,moods,era,spotify_url,apple_music_url,youtube_music_url,youtube_video_id,preview_url,artwork_url,itunes_track_id,traits,scenarios,chips,popularity_score,explicit,energy_level,tempo_level,lyric_density"
+        "id,title,artist,language,region,country,genres,moods,era,spotify_uri,spotify_url,apple_music_url,youtube_music_url,youtube_video_id,preview_url,artwork_url,itunes_track_id,traits,scenarios,chips,popularity_score,explicit,energy_level,tempo_level,lyric_density"
       )
       .eq("is_active", true)
       .order("popularity_score", { ascending: false })
@@ -191,6 +191,7 @@ function mapSongRow(row: any): Song | null {
     moods: row.moods ? toStringArray(row.moods) : undefined,
     era: row.era ? String(row.era) : null,
     platforms: {
+      spotifyUri: row.spotify_uri ?? null,
       spotifyUrl: row.spotify_url ?? null,
       appleMusicUrl: row.apple_music_url ?? null,
       youtubeMusicUrl: row.youtube_music_url ?? null,

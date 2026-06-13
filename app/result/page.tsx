@@ -10,6 +10,7 @@ import { logResultEvent } from "@/lib/analytics";
 import { FALLBACK_CATALOG } from "@/lib/catalog.fallback";
 import { loadCatalog } from "@/lib/catalog";
 import { computeResults } from "@/lib/engine";
+import { getStorageJson } from "@/lib/storage";
 import type { Catalog, FilterId, RoastIntensity, VibeCardData } from "@/lib/types";
 
 const BUILDING_DELAY_MS = 1600;
@@ -42,10 +43,12 @@ function ResultContent() {
   const params = useSearchParams();
   const [catalog, setCatalog] = useState<Catalog>(FALLBACK_CATALOG);
   const [revealed, setRevealed] = useState(false);
+  const [recentSongIds, setRecentSongIds] = useState<string[]>([]);
   const logged = useRef(false);
 
   useEffect(() => {
     setCatalog(loadCatalog(setCatalog));
+    setRecentSongIds(getStorageJson("recentSongIds", []));
   }, []);
 
   useEffect(() => {
@@ -89,8 +92,9 @@ function ResultContent() {
       region,
       disliked,
       roastIntensity,
+      recentSongIds,
     });
-  }, [catalog, scenario, cardIds, superIds, dislikedIds, lang, region, roastIntensity]);
+  }, [catalog, scenario, cardIds, superIds, dislikedIds, lang, region, roastIntensity, recentSongIds]);
 
   useEffect(() => {
     if (!revealed || !result || logged.current) return;

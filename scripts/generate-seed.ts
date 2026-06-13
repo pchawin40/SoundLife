@@ -82,7 +82,7 @@ for (const scenario of FALLBACK_SCENARIOS) {
 lines.push("", "/* songs */");
 for (const song of FALLBACK_SONGS) {
   lines.push(
-    `insert into public.songs (title, artist, language, region, genres, era, spotify_url, apple_music_url, youtube_music_url, youtube_video_id, traits, scenarios, chips, popularity_score) values (` +
+    `insert into public.songs (title, artist, language, region, genres, era, spotify_uri, spotify_url, apple_music_url, youtube_music_url, youtube_video_id, traits, scenarios, chips, popularity_score) values (` +
       [
         q(song.title),
         q(song.artist),
@@ -90,6 +90,7 @@ for (const song of FALLBACK_SONGS) {
         q(song.region),
         textArray(song.genres),
         song.era ? q(song.era) : "null",
+        song.platforms.spotifyUri ? q(song.platforms.spotifyUri) : "null",
         q(spotifySearch(song)),
         q(appleSearch(song)),
         q(ytmSearch(song)),

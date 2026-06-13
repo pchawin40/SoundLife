@@ -15,6 +15,7 @@ import type {
   ResultData,
   RoastIntensity,
   Scenario,
+  SongScoreDebug,
   SoundLifeArchetype,
   Song,
   Trait,
@@ -23,18 +24,25 @@ import type {
   VibeCardData,
 } from "./types";
 
-const SCENARIO_SONG_BONUS = 4;
+const SCENARIO_SONG_BONUS = 1.8;
 const SCENARIO_ARTIST_BONUS = 2;
 const BASE_TRAIT_WEIGHT = 1.5;
 const SUPER_VIBE_MULTIPLIER = 2.2;
 /** Deterministic nudge so equal-affinity songs rank by popularity. */
-const POPULARITY_WEIGHT = 0.01;
+const POPULARITY_WEIGHT = 0.003;
 /** Boost for songs whose genres/languages match liked cards. */
-const GENRE_BOOST = 3;
+const GENRE_BOOST = 4.5;
+const SUPER_SIGNAL_BOOST = 3;
+const FILTER_GENRE_BOOST = 2.5;
+const FILTER_LANGUAGE_BOOST = 9;
+const CARD_LANGUAGE_BOOST = 5;
+const REGION_BOOST = 3;
 /** Penalty for songs whose genres are blocked via antiGenre cards. */
-const GENRE_BLOCK_PENALTY = -12;
+const GENRE_BLOCK_PENALTY = -60;
 /** Small penalty for songs that resemble cards the user actively rejected. */
-const REJECTED_PREFERENCE_PENALTY = -3;
+const REJECTED_PREFERENCE_PENALTY = -4.5;
+const DISLIKED_TRAIT_WEIGHT = -4;
+const RECENT_SONG_PENALTY = -3;
 const RESULT_SONG_COUNT = 10;
 
 /* ----------------------------- deck ----------------------------- */
@@ -176,6 +184,24 @@ function buildPreferences(
   };
 }
 
+function accumulateCardTraits(cards: VibeCardData[]): Record<Trait, number> {
+  const totals = Object.fromEntries(TRAITS.map((trait) => [trait, 0])) as Record<Trait, number>;
+  for (const card of cards) {
+    for (const trait of TRAITS) totals[trait] += card.traits[trait] ?? 0;
+  }
+  return totals;
+}
+
+function normalizeTotals(totals: Record<Trait, number>): Record<Trait, number> {
+  const max = Math.max(...TRAITS.map((trait) => totals[trait]), 0);
+  if (max <= 0) {
+    return Object.fromEntries(TRAITS.map((trait) => [trait, 0])) as Record<Trait, number>;
+  }
+  return Object.fromEntries(
+    TRAITS.map((trait) => [trait, totals[trait] / max])
+  ) as Record<Trait, number>;
+}
+
 function affinity(traits: TraitScores, normalized: Record<Trait, number>): number {
   let score = 0;
   for (const trait of TRAITS) {
@@ -218,6 +244,7 @@ export interface ResultOptions {
   region?: string | null;
   disliked?: VibeCardData[];
   roastIntensity?: RoastIntensity;
+  recentSongIds?: string[];
 }
 
 interface ArchetypeMatch {
@@ -234,6 +261,12 @@ interface PreferenceSignals {
   rejectedLanguages: Set<string>;
   rejectedRegions: Set<string>;
   rejectedBlockedGenres: Set<string>;
+}
+
+interface ScoredSong {
+  song: Song;
+  hardBlocked: boolean;
+  debug: SongScoreDebug;
 }
 
 function hasOverlap(values: Set<string>, desired: string[]): boolean {
@@ -342,6 +375,10 @@ function formatGenre(genre: string): string {
     .join(" ");
 }
 
+function roundScore(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function topLikedLabels(liked: VibeCardData[], superVibed: VibeCardData[]): string[] {
   const superIds = new Set(superVibed.map((card) => card.id));
   const ranked = [...liked].sort((a, b) => {
@@ -410,6 +447,7 @@ function buildWhyMatched(input: {
       preferences: input.preferences,
     }),
     strongestSignalType: strongestSignalType(input.filter, input.preferences),
+    avoided: [...input.preferences.blockedGenres].slice(0, 3).map(formatGenre),
   };
 }
 
@@ -431,6 +469,237 @@ function buildVibeTags(
   return [...new Set([...tags, ...songGenres, archetype.name])].slice(0, 5);
 }
 
+function primaryGenre(song: Song): string {
+  return song.genres[0] ?? "unknown";
+}
+
+function hasSongGenre(song: Song, genres: Set<string>): boolean {
+  return song.genres.some((genre) => genres.has(genre));
+}
+
+function scoreSong(input: {
+  song: Song;
+  scenario: Scenario;
+  normalized: Record<Trait, number>;
+  dislikedNormalized: Record<Trait, number>;
+  preferences: PreferenceSignals;
+  superPreferences: PreferenceSignals;
+  filter: GlobalFilterOption;
+  recentSongIds: Set<string>;
+}): ScoredSong {
+  const {
+    song,
+    scenario,
+    normalized,
+    dislikedNormalized,
+    preferences,
+    superPreferences,
+    filter,
+    recentSongIds,
+  } = input;
+  const whyMatched: string[] = [];
+  const baseTraitScore = roundScore(affinity(song.traits, normalized) * 7);
+  if (baseTraitScore > 0) whyMatched.push("trait fingerprint");
+
+  const scenarioBonus = song.scenarios.includes(scenario.id) ? SCENARIO_SONG_BONUS : 0;
+  if (scenarioBonus > 0) whyMatched.push(`${scenario.label.toLowerCase()} scene`);
+
+  let genreBonus = 0;
+  for (const genre of song.genres) {
+    if (preferences.boostedGenres.has(genre)) {
+      genreBonus += GENRE_BOOST;
+      whyMatched.push(`${formatGenre(genre)} swipe`);
+    }
+    if (superPreferences.boostedGenres.has(genre)) {
+      genreBonus += SUPER_SIGNAL_BOOST;
+      whyMatched.push(`super ${formatGenre(genre)}`);
+    }
+    if (filter.genres?.includes(genre)) {
+      genreBonus += FILTER_GENRE_BOOST;
+      whyMatched.push(`${formatGenre(genre)} filter`);
+    }
+  }
+  genreBonus = roundScore(genreBonus);
+
+  let languageBonus = 0;
+  if (filter.languages?.includes(song.language)) {
+    languageBonus += FILTER_LANGUAGE_BOOST;
+    whyMatched.push(`${formatGenre(song.language)} filter`);
+  }
+  if (preferences.boostedLanguages.has(song.language)) {
+    languageBonus += CARD_LANGUAGE_BOOST;
+    whyMatched.push(`${formatGenre(song.language)} swipe`);
+  }
+  if (superPreferences.boostedLanguages.has(song.language)) {
+    languageBonus += SUPER_SIGNAL_BOOST;
+    whyMatched.push(`super ${formatGenre(song.language)}`);
+  }
+
+  let regionBonus = 0;
+  if (filter.regions?.includes(song.region)) {
+    regionBonus += REGION_BOOST;
+    whyMatched.push(`${formatGenre(song.region)} filter`);
+  }
+  if (preferences.boostedRegions.has(song.region)) {
+    regionBonus += REGION_BOOST;
+    whyMatched.push(`${formatGenre(song.region)} swipe`);
+  }
+  if (superPreferences.boostedRegions.has(song.region)) {
+    regionBonus += SUPER_SIGNAL_BOOST;
+    whyMatched.push(`super ${formatGenre(song.region)}`);
+  }
+
+  const popularityBonus = roundScore((song.popularity ?? 0) * POPULARITY_WEIGHT);
+  const dislikedTraitPenalty = roundScore(
+    affinity(song.traits, dislikedNormalized) * DISLIKED_TRAIT_WEIGHT
+  );
+  let rejectedPreferencePenalty = 0;
+  if (hasSongGenre(song, preferences.rejectedGenres)) {
+    rejectedPreferencePenalty += REJECTED_PREFERENCE_PENALTY;
+  }
+  if (preferences.rejectedLanguages.has(song.language)) {
+    rejectedPreferencePenalty += REJECTED_PREFERENCE_PENALTY;
+  }
+  if (preferences.rejectedRegions.has(song.region)) {
+    rejectedPreferencePenalty += REJECTED_PREFERENCE_PENALTY;
+  }
+  const dislikePenalty = roundScore(dislikedTraitPenalty + rejectedPreferencePenalty);
+  if (dislikePenalty < 0) whyMatched.push("rejected-card penalty");
+
+  const hardBlocked = hasSongGenre(song, preferences.blockedGenres);
+  const blockedGenrePenalty = hardBlocked ? GENRE_BLOCK_PENALTY : 0;
+  if (hardBlocked) whyMatched.push("blocked genre");
+
+  const recentPenalty = recentSongIds.has(song.id) ? RECENT_SONG_PENALTY : 0;
+  if (recentPenalty < 0) whyMatched.push("recently shown");
+
+  const finalScore = roundScore(
+    baseTraitScore +
+      scenarioBonus +
+      genreBonus +
+      languageBonus +
+      regionBonus +
+      popularityBonus +
+      dislikePenalty +
+      blockedGenrePenalty +
+      recentPenalty
+  );
+
+  return {
+    song,
+    hardBlocked,
+    debug: {
+      songId: song.id,
+      title: song.title,
+      artist: song.artist,
+      baseTraitScore,
+      scenarioBonus,
+      genreBonus,
+      languageBonus,
+      regionBonus,
+      popularityBonus,
+      dislikePenalty,
+      blockedGenrePenalty,
+      diversityPenalty: 0,
+      recentPenalty,
+      finalScore,
+      whyMatched,
+    },
+  };
+}
+
+function diversityPenaltyFor(
+  song: Song,
+  selected: ScoredSong[],
+  filter: GlobalFilterOption,
+  recentSongIds: Set<string>
+): number {
+  const artistCount = selected.filter((item) => item.song.artist === song.artist).length;
+  const genreCount = selected.filter((item) => primaryGenre(item.song) === primaryGenre(song)).length;
+  const languageCount = selected.filter((item) => item.song.language === song.language).length;
+  let penalty = 0;
+  if (artistCount > 0) penalty -= 8 * artistCount;
+  if (genreCount >= 2) penalty -= 2 * (genreCount - 1);
+  if (filter.id === "global" && languageCount >= 3) penalty -= 5 * (languageCount - 2);
+  if (recentSongIds.has(song.id)) penalty -= 2;
+  return roundScore(penalty);
+}
+
+function rerankSongs(
+  scored: ScoredSong[],
+  filter: GlobalFilterOption,
+  recentSongIds: Set<string>
+): ScoredSong[] {
+  const remaining = [...scored].sort(
+    (a, b) => b.debug.finalScore - a.debug.finalScore || a.song.title.localeCompare(b.song.title)
+  );
+  const selected: ScoredSong[] = [];
+  const languageLimited = filter.id === "global";
+  const focusedFilter = filter.id !== "global";
+  const passes = [
+    {
+      artistMax: 1,
+      genreMax: focusedFilter ? 6 : 3,
+      languageMax: languageLimited ? 3 : RESULT_SONG_COUNT,
+      allowRecent: false,
+    },
+    {
+      artistMax: 2,
+      genreMax: focusedFilter ? 8 : 4,
+      languageMax: languageLimited ? 5 : RESULT_SONG_COUNT,
+      allowRecent: true,
+    },
+    {
+      artistMax: RESULT_SONG_COUNT,
+      genreMax: RESULT_SONG_COUNT,
+      languageMax: RESULT_SONG_COUNT,
+      allowRecent: true,
+    },
+  ];
+
+  const canPick = (item: ScoredSong, pass: (typeof passes)[number]): boolean => {
+    if (!pass.allowRecent && recentSongIds.has(item.song.id)) return false;
+    const artistCount = selected.filter((candidate) => candidate.song.artist === item.song.artist).length;
+    if (artistCount >= pass.artistMax) return false;
+    const genreCount = selected.filter((candidate) => primaryGenre(candidate.song) === primaryGenre(item.song)).length;
+    if (genreCount >= pass.genreMax) return false;
+    if (languageLimited) {
+      const languageCount = selected.filter((candidate) => candidate.song.language === item.song.language).length;
+      if (languageCount >= pass.languageMax) return false;
+    }
+    return true;
+  };
+
+  for (const pass of passes) {
+    while (selected.length < RESULT_SONG_COUNT) {
+      const index = remaining.findIndex((item) => canPick(item, pass));
+      if (index === -1) break;
+      const [item] = remaining.splice(index, 1);
+      const diversityPenalty = diversityPenaltyFor(item.song, selected, filter, recentSongIds);
+      item.debug.diversityPenalty = diversityPenalty;
+      item.debug.finalScore = roundScore(item.debug.finalScore + diversityPenalty);
+      if (diversityPenalty < 0) item.debug.whyMatched.push("diversity rerank");
+      selected.push(item);
+    }
+    if (selected.length >= RESULT_SONG_COUNT) break;
+  }
+
+  return selected;
+}
+
+export function logResultScoreDebug(result: ResultData): void {
+  if (process.env.NODE_ENV === "production" || !result.scoreDebug) return;
+  console.table(
+    result.scoreDebug.map(({ title, artist, finalScore, whyMatched, ...scores }) => ({
+      title,
+      artist,
+      finalScore,
+      why: whyMatched.join(", "),
+      ...scores,
+    }))
+  );
+}
+
 export function computeResults(
   catalog: Catalog,
   scenario: Scenario,
@@ -447,15 +716,8 @@ export function computeResults(
   ) as Record<Trait, number>;
 
   const preferences = buildPreferences(liked, disliked);
-  const {
-    boostedGenres,
-    blockedGenres,
-    boostedLanguages,
-    boostedRegions,
-    rejectedGenres,
-    rejectedLanguages,
-    rejectedRegions,
-  } = preferences;
+  const superPreferences = buildPreferences(superVibed);
+  const dislikedNormalized = normalizeTotals(accumulateCardTraits(disliked));
   const filter = getFilter(options.filterId);
 
   const traitStats: TraitStat[] = TRAITS
@@ -480,35 +742,46 @@ export function computeResults(
   });
   const archetype = archetypeMatch.archetype;
 
-  const ranked = catalog.songs
-    .map((song) => {
-      let score =
-        affinity(song.traits, normalized) +
-        (song.scenarios.includes(scenario.id) ? SCENARIO_SONG_BONUS : 0) +
-        (song.popularity ?? 0) * POPULARITY_WEIGHT;
-
-      // Genre boost/block from typed vibe cards
-      if (song.genres.some((g) => boostedGenres.has(g))) score += GENRE_BOOST;
-      if (song.genres.some((g) => blockedGenres.has(g))) score += GENRE_BLOCK_PENALTY;
-      if (boostedLanguages.has(song.language)) score += GENRE_BOOST;
-      if (boostedRegions.has(song.region)) score += GENRE_BOOST;
-      if (song.genres.some((g) => rejectedGenres.has(g))) score += REJECTED_PREFERENCE_PENALTY;
-      if (rejectedLanguages.has(song.language)) score += REJECTED_PREFERENCE_PENALTY;
-      if (rejectedRegions.has(song.region)) score += REJECTED_PREFERENCE_PENALTY;
-
-      return { song, score };
+  const recentSongIds = new Set(options.recentSongIds ?? []);
+  const scored = catalog.songs.map((song) =>
+    scoreSong({
+      song,
+      scenario,
+      normalized,
+      dislikedNormalized,
+      preferences,
+      superPreferences,
+      filter,
+      recentSongIds,
     })
-    .sort((a, b) => b.score - a.score || a.song.title.localeCompare(b.song.title))
-    .map((r) => r.song);
+  );
 
-  let songs: Song[];
-  if (filter.id === "global" && !options.region) {
-    songs = ranked.slice(0, RESULT_SONG_COUNT);
-  } else {
-    const matched = ranked.filter((s) => songMatchesFilter(s, filter, options.region));
-    const rest = ranked.filter((s) => !songMatchesFilter(s, filter, options.region));
-    songs = [...matched, ...rest].slice(0, RESULT_SONG_COUNT);
+  const playlistWarnings: string[] = [];
+  let scoringPool = scored;
+  if (preferences.blockedGenres.size > 0) {
+    const unblocked = scored.filter((item) => !item.hardBlocked);
+    if (unblocked.length >= RESULT_SONG_COUNT) {
+      scoringPool = unblocked;
+    } else {
+      playlistWarnings.push(
+        `Not enough non-${[...preferences.blockedGenres].map(formatGenre).join("/")} songs; SoundLife used a few low-ranked fallbacks.`
+      );
+    }
   }
+
+  const matchedFilter =
+    filter.id === "global" && !options.region
+      ? scoringPool
+      : scoringPool.filter((item) => songMatchesFilter(item.song, filter, options.region));
+  const rest =
+    filter.id === "global" && !options.region
+      ? []
+      : scoringPool.filter((item) => !songMatchesFilter(item.song, filter, options.region));
+  const rankedPool = [...matchedFilter, ...rest].sort(
+    (a, b) => b.debug.finalScore - a.debug.finalScore || a.song.title.localeCompare(b.song.title)
+  );
+  const reranked = rerankSongs(rankedPool, filter, recentSongIds);
+  const songs = reranked.map((item) => item.song);
 
   const secondShare = traitStats[1] ? traitStats[1].percent / 98 : 0.5;
   const superBonus = superVibed.length * 3;
@@ -535,6 +808,8 @@ export function computeResults(
     matchPercent,
     traits: traitStats,
     songs,
+    scoreDebug: reranked.map((item) => item.debug),
+    playlistWarnings,
     artists: pickArtists(songs, normalized, scenario),
     playlists: pickPlaylists(scenario, topTraits[0]),
     scenarioId: scenario.id,

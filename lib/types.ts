@@ -61,6 +61,14 @@ export interface VibeCardData {
   boostRegions?: string[];
   /** Short explanation shown on flip: "why this matters" */
   whyText?: string;
+  /** Optional editorial image path under /public */
+  imageUrl?: string;
+  /** Accessible description for the card image */
+  imageAlt?: string;
+  /** Prompt used to generate or brief the card image */
+  visualPrompt?: string;
+  /** Theme key for fallback styling when no image is available */
+  visualTheme?: string;
 }
 
 export interface ReasonChip {
@@ -69,6 +77,7 @@ export interface ReasonChip {
 }
 
 export interface SongPlatforms {
+  spotifyUri?: string | null;
   spotifyUrl?: string | null;
   appleMusicUrl?: string | null;
   youtubeMusicUrl?: string | null;
@@ -185,6 +194,25 @@ export interface ResultMatchReason {
   rejected: string;
   strongestSignal: string;
   strongestSignalType: "trait" | "genre" | "language";
+  avoided?: string[];
+}
+
+export interface SongScoreDebug {
+  songId: string;
+  title: string;
+  artist: string;
+  baseTraitScore: number;
+  scenarioBonus: number;
+  genreBonus: number;
+  languageBonus: number;
+  regionBonus: number;
+  popularityBonus: number;
+  dislikePenalty: number;
+  blockedGenrePenalty: number;
+  diversityPenalty: number;
+  recentPenalty: number;
+  finalScore: number;
+  whyMatched: string[];
 }
 
 export interface ResultData {
@@ -197,6 +225,8 @@ export interface ResultData {
   matchPercent: number;
   traits: TraitStat[];
   songs: Song[];
+  scoreDebug?: SongScoreDebug[];
+  playlistWarnings?: string[];
   artists: string[];
   playlists: string[];
   scenarioId: ScenarioId;

@@ -20,7 +20,7 @@ Engine exports: `buildDeck(catalog, scenario, seed?)`, `dominantTrait(traits)`, 
 
 Supabase tables: `songs`, `vibe_cards`, `scenarios`, `catalog_versions`, `result_events`, `outbound_click_events`.
 
-Supabase song columns include `id`, `title`, `artist`, `language`, `region`, `country`, `genres`, `moods`, `era`, `spotify_url`, `apple_music_url`, `youtube_music_url`, `youtube_video_id`, `traits`, `scenarios`, `chips`, `is_active`, `popularity_score`, `explicit`, `energy_level`, `tempo_level`, `lyric_density`, `created_at`, `updated_at`, plus optional `preview_url`, `artwork_url`, `itunes_track_id`.
+Supabase song columns include `id`, `title`, `artist`, `language`, `region`, `country`, `genres`, `moods`, `era`, `spotify_uri`, `spotify_url`, `apple_music_url`, `youtube_music_url`, `youtube_video_id`, `traits`, `scenarios`, `chips`, `is_active`, `popularity_score`, `explicit`, `energy_level`, `tempo_level`, `lyric_density`, `created_at`, `updated_at`, plus optional `preview_url`, `artwork_url`, `itunes_track_id`.
 
 Analytics signatures: `logResultEvent(input: { result; likedCardIds; region? }): void` and `logOutboundClick(input: { songId?; platform; campaign; resultIdentity? }): void`.
 

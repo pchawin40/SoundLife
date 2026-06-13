@@ -35,6 +35,7 @@ vars the app builds, runs, and recommends from the bundled catalog.
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key — never the service role key |
 | `NEXT_PUBLIC_APPLE_AFFILIATE_TOKEN` | Apple Services affiliate token, appended to Apple Music links as `at=`; campaign tracking uses `ct=soundlife` |
+| `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` | Optional Spotify public client ID for browser PKCE playlist export; no client secret |
 
 ## Supabase setup
 
@@ -118,6 +119,29 @@ When a catalog row has `preview_url`, SoundLife can stream that short external
 preview after a user taps play. iTunes previews are stream-only, never cached,
 and are labeled "provided courtesy of iTunes" near the control.
 
+### Spotify playlist export
+
+If `NEXT_PUBLIC_SPOTIFY_CLIENT_ID` is configured, Playlist Mode can connect to
+Spotify with the browser PKCE flow and create a private playlist for the
+current result. The app generates a `code_verifier` and `code_challenge` in the
+browser, stores the verifier and pending playlist payload in `sessionStorage`,
+redirects to Spotify with `playlist-modify-private`, then exchanges the
+authorization code on `/spotify/callback` without a client secret.
+Add your deployed `/spotify/callback` URL to the Spotify app's allowed redirect
+URIs before enabling the flag.
+
+The access token is used only for the current export session. SoundLife does
+not store refresh tokens. Playlist creation uses Spotify's current-user
+`/v1/me/playlists` endpoint and does not call `GET /v1/me`. Tracks use
+`spotify_uri` when present; otherwise the browser searches Spotify by title and
+artist and only accepts conservative matches. If the Spotify client ID is
+missing, the button stays as "Spotify playlist export — coming soon."
+
+YouTube playlist creation is intentionally not implemented yet. It requires
+Google OAuth, YouTube Data API `playlists.insert` and `playlistItems.insert`,
+and a reliable `youtube_video_id` or conservative matching path for every song.
+Build Spotify first.
+
 ## Shareable results
 
 Results live at a query-param route (static-export safe, no dynamic segment):
@@ -165,10 +189,16 @@ and the global ranking backfills, so results are never empty.
 ## Recommendation logic (client-side, deterministic)
 
 Vibe cards carry weights across 11 traits. Right-swipes and Super Vibes
-accumulate traits on top of the scenario's base traits; rejected cards and
-blocked genres shape the penalties. Every catalog song is scored by trait
-affinity + scenario bonus + card genre/language/region signals + a small
-popularity tiebreaker, then sorted deterministically.
+accumulate traits on top of the scenario's base traits; rejected cards create
+trait and preference penalties. Every catalog song is scored by trait affinity,
+scenario fit, liked genres, preferred languages/regions, blocked genres,
+rejected signals, and a small popularity tiebreaker. Blocked genres are removed
+when enough alternatives exist.
+
+After scoring, a deterministic reranker avoids repeat artists, overused
+genres, overused languages in Global mode, and recently shown songs stored in
+localStorage. In development, the result page exposes a scoring debug table and
+logs the same score breakdown to the console.
 
 The result identity comes from `lib/archetypes.ts`: 20+ personality-style music
 diagnoses with soft, accurate, and roast copy, screenshot-friendly captions,
@@ -189,14 +219,14 @@ aux warnings, and visual themes.
 
 ```
 app/              layout, page (landing → scenario → swipe), daily/, match/,
-                  result/ (shareable results)
+                  result/ (shareable results), spotify/callback/
 components/       LandingPage, ScenarioPicker, GlobalFilter, SwipeDeck, VibeCard,
                   BuildingScreen, ResultsScreen, ShareResultCard, SongCard,
                   TraitBar, PlatformButtons, StreakBadge, CollectionGrid
 lib/              types, data (editorial: traits/identities/filters),
                   catalog.fallback (bundled catalog), catalog (SWR + merge),
                   archetypes, daily, streak, storage, match, engine (scoring),
-                  platforms (deep links), analytics, audio, haptics,
+                  platforms (deep links), analytics, audio, haptics, spotify,
                   share (text + canvas card), supabaseClient
 supabase/         schema.sql (tables + RLS + indexes), seed.sql (generated)
 scripts/          generate-seed.ts, generate-og.ts, refresh-catalog.ts

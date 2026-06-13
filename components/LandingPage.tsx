@@ -1,346 +1,147 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import CollectionGrid from "./CollectionGrid";
-import StreakBadge from "./StreakBadge";
-import { getStorageJson } from "@/lib/storage";
-import { EMPTY_PROFILE_STATE } from "@/lib/streak";
-import {
-  resolveVibeTags,
-  resolveVibeVisual,
-  type VibeVisualInput,
-} from "@/lib/vibeVisuals";
-import type { SoundLifeProfileState } from "@/lib/types";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { getCardVisual } from "@/lib/cardVisuals";
+import type { VibeCardData } from "@/lib/types";
 
 interface LandingPageProps {
   onStart: () => void;
   onChooseScene?: () => void;
 }
 
-const VIRAL_LINES = [
-  "You're not sad. You're cinematic.",
-  "Gym villain arc unlocked.",
-  "This sounds like walking fast and ignoring texts.",
-  "Your music taste has main character damage.",
-  "No cowboy sadness. Got it.",
-  "Global heat unlocked.",
-  "This is getting suspiciously accurate.",
-];
-
-const RESULT_EXAMPLES = [
-  { label: "Gym Villain Arc", color: "#DC2626" },
-  { label: "Tokyo Night Drive", color: "#7C3AED" },
-  { label: "Velvet Chaos", color: "#9333EA" },
-  { label: "Afrobeats Sunshine", color: "#D97706" },
-  { label: "Korean Night Drive", color: "#DB2777" },
-  { label: "Soft Beach Sunset", color: "#0D9488" },
-];
-
-type MockCard = VibeVisualInput & {
-  sticker: "LIKE" | "NOPE" | "SUPER VIBE";
-  subtitle: string;
+const PREVIEW_CARD: VibeCardData = {
+  id: "tokyo-neon-walk",
+  emoji: "🌃",
+  title: "Tokyo night drive",
+  subtitle: "Neon rain. Quiet confidence. Main-character silence.",
+  traits: { cinematic: 2, darkness: 2, focus: 1 },
+  feedback: "+ Cinematic",
+  cardType: "region",
 };
 
-const MOCK_CARDS: MockCard[] = [
-  {
-    id: "afrobeats-sunshine",
-    title: "Afrobeats sunshine",
-    subtitle: "Warm rhythm, real outside energy",
-    cardType: "genre",
-    sticker: "LIKE",
-    traits: { warmth: 2, tempo: 2, energy: 1 },
-  },
-  {
-    id: "tokyo-night-drive",
-    title: "Tokyo night drive",
-    subtitle: "Neon rain and main-character silence",
-    cardType: "region",
-    sticker: "SUPER VIBE",
-    traits: { cinematic: 2, darkness: 2, focus: 1 },
-  },
-  {
-    id: "gym-villain-arc",
-    title: "Gym villain arc",
-    subtitle: "The final rep became personal",
-    cardType: "mood",
-    sticker: "LIKE",
-    traits: { aggression: 2, confidence: 2, energy: 2 },
-  },
-  {
-    id: "soft-beach-sunset",
-    title: "Soft beach sunset",
-    subtitle: "Golden hour with the volume low",
-    cardType: "lifestyle",
-    sticker: "NOPE",
-    traits: { warmth: 2, softness: 2, romance: 1 },
-  },
-];
-
-const STICKER_STYLES = {
-  LIKE: "left-5 top-7 -rotate-12 border-green-500 text-green-500",
-  NOPE: "right-5 top-7 rotate-12 border-red-500 text-red-500",
-  "SUPER VIBE": "left-1/2 top-7 -translate-x-1/2 -rotate-3 border-yellow-400 text-yellow-500",
-};
-
-function MockSwipePreview() {
-  const [cardIndex, setCardIndex] = useState(0);
-  const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
+function PreviewImagePanel({ card }: { card: VibeCardData }) {
+  const visual = getCardVisual(card);
+  const candidates = useMemo(
+    () =>
+      [visual.imageUrl, visual.legacyImageUrl].filter((url): url is string => Boolean(url)),
+    [visual.imageUrl, visual.legacyImageUrl]
+  );
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    let cardTimer: number | undefined;
-    const t = window.setInterval(() => {
-      setSwipeDir(Math.random() > 0.4 ? 1 : -1);
-      cardTimer = window.setTimeout(
-        () => setCardIndex((i) => (i + 1) % MOCK_CARDS.length),
-        260
-      );
-    }, 2500);
-    return () => {
-      window.clearInterval(t);
-      if (cardTimer) window.clearTimeout(cardTimer);
-    };
-  }, []);
+    setActiveIndex(0);
+  }, [card.id, visual.imageUrl, visual.legacyImageUrl]);
 
-  const card = MOCK_CARDS[cardIndex];
-  const visual = resolveVibeVisual(card);
-  const tags = resolveVibeTags(card, visual);
-  const visualStyle = visual.imageUrl
-    ? {
-        backgroundImage: `${visual.overlay}, url(${visual.imageUrl})`,
-        backgroundPosition: visual.imagePosition ?? "center",
-        backgroundSize: "cover",
-      }
-    : { background: visual.background };
+  const activeUrl = candidates[activeIndex];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.65, ease: "easeOut", delay: 0.1 }}
-      className="relative mx-auto w-full max-w-[440px]"
-    >
-      <div className="relative mx-auto h-[500px] w-[88vw] max-w-[390px] sm:h-[520px] sm:max-w-[420px]">
-        {/* Stack cards behind */}
-        <div className="absolute left-9 top-5 h-[94%] w-[88%] -rotate-3 rounded-[28px] bg-white shadow-card opacity-70" />
-        <div className="absolute right-0 top-10 h-[88%] w-[84%] rotate-3 rounded-[28px] bg-white shadow-card opacity-50" />
-
-        {/* Main card */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={cardIndex}
-            initial={{ scale: 0.95, opacity: 0, x: swipeDir * -46, rotate: swipeDir * -2 }}
-            animate={{ scale: 1, opacity: 1, x: 0, rotate: 0 }}
-            exit={{ x: swipeDir * 260, rotate: swipeDir * 8, opacity: 0 }}
-            transition={{ duration: 0.42, ease: "easeOut" }}
-            className="absolute inset-0 overflow-hidden rounded-[30px] bg-white shadow-card-lg ring-1 ring-black/[0.04]"
-          >
-            <div className="relative h-[68%] overflow-hidden" style={visualStyle}>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-white/5" />
-              <span className="absolute left-4 top-4 rounded-full border border-white/40 bg-white/85 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-gray-800 shadow-sm backdrop-blur-md">
-                Preview
-              </span>
-              <span className="absolute right-4 top-4 rounded-full border border-white/35 bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm backdrop-blur-md">
-                {visual.eyebrow}
-              </span>
-            </div>
-
-            <div className="flex h-[32%] flex-col items-start justify-between px-6 pb-7 pt-5 text-left">
-              <div>
-                <h3 className="text-[27px] font-black leading-[1.02] tracking-tight text-gray-950">
-                  {card.title}
-                </h3>
-                <p className="mt-2 text-sm font-semibold leading-5 text-gray-500">
-                  {card.subtitle}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.08em]"
-                    style={{
-                      backgroundColor: `${visual.accent}12`,
-                      borderColor: `${visual.accent}2E`,
-                      color: visual.accent,
-                    }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div
-              className={`absolute rounded-xl border-[3px] bg-white/95 px-4 py-1.5 text-base font-black uppercase tracking-wider shadow-card backdrop-blur-sm ${STICKER_STYLES[card.sticker]}`}
-            >
-              {card.sticker}
-            </div>
-          </motion.div>
-        </AnimatePresence>
+    <div className="relative h-[69%] overflow-hidden">
+      {activeUrl ? (
+        <>
+          {/* Native img enables jpg -> legacy png -> gradient fallback chain */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={activeUrl}
+            alt={visual.imageAlt ?? ""}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: visual.imagePosition ?? "center" }}
+            onError={() => setActiveIndex((index) => index + 1)}
+          />
+          <div className="absolute inset-0" style={{ backgroundImage: visual.overlay }} />
+        </>
+      ) : (
+        <div className="absolute inset-0" style={{ background: visual.background }} />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-white/5" />
+      <div className="absolute left-5 top-5 -rotate-12 rounded-xl border-[3px] border-green-500 bg-white/95 px-4 py-1.5 text-base font-black uppercase tracking-wider text-green-500 shadow-card backdrop-blur-sm">
+        Like
       </div>
+    </div>
+  );
+}
 
-      {/* Mock result chips */}
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
-        {RESULT_EXAMPLES.slice(0, 3).map((r) => (
-          <span
-            key={r.label}
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-black"
-            style={{ borderColor: `${r.color}44`, color: r.color, backgroundColor: `${r.color}10` }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: r.color }} />
-            {r.label}
-          </span>
-        ))}
+function SwipePreviewCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 22, rotate: 1.5 }}
+      animate={{ opacity: 1, y: 0, rotate: 0 }}
+      transition={{ duration: 0.65, ease: "easeOut", delay: 0.12 }}
+      className="mx-auto w-full max-w-[430px] lg:max-w-[470px]"
+    >
+      <div className="relative aspect-[0.76] w-full overflow-hidden rounded-[32px] bg-white shadow-card-lg ring-1 ring-black/[0.05]">
+        <PreviewImagePanel card={PREVIEW_CARD} />
+        <div className="flex h-[31%] flex-col justify-center px-7 text-left">
+          <h2 className="text-3xl font-black leading-none tracking-tight text-gray-950 sm:text-4xl">
+            {PREVIEW_CARD.title}
+          </h2>
+          <p className="mt-3 max-w-xs text-sm font-semibold leading-6 text-gray-500">
+            {PREVIEW_CARD.subtitle}
+          </p>
+        </div>
       </div>
     </motion.div>
   );
 }
 
-const STEPS = [
-  { eyebrow: "01 Pick a moment", copy: "Drive, gym, focus, party, heartbreak, chill, or full chaos." },
-  { eyebrow: "02 Swipe your vibe", copy: "Right = this is me. Left = not today. Up = SUPER VIBE." },
-  { eyebrow: "03 Get the identity", copy: "A shareable card, a tracklist, a music identity." },
-];
-
 export default function LandingPage({ onStart, onChooseScene }: LandingPageProps) {
-  const [lineIndex, setLineIndex] = useState(0);
-  const [profile, setProfile] = useState<SoundLifeProfileState>(EMPTY_PROFILE_STATE);
-
-  useEffect(() => {
-    const timer = window.setInterval(
-      () => setLineIndex((i) => (i + 1) % VIRAL_LINES.length),
-      2800
-    );
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    setProfile(getStorageJson("profile", EMPTY_PROFILE_STATE));
-  }, []);
-
   return (
-    <div className="flex w-full flex-1 items-center py-8 lg:min-h-[calc(100dvh-2.5rem)] lg:py-10">
-      <div className="grid w-full items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
-        {/* Left: copy */}
-        <motion.section
-          initial={{ opacity: 0, y: 24 }}
+    <div className="flex w-full flex-1 flex-col">
+      <section className="grid min-h-[calc(100dvh-2.5rem)] w-full items-center gap-10 py-8 sm:py-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,0.72fr)] lg:gap-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: "easeOut" }}
-          className="max-w-3xl"
+          className="mx-auto flex w-full max-w-2xl flex-col items-start text-left"
         >
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-2 text-xs font-black uppercase tracking-[0.2em] text-gray-500 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-brand-teal" aria-hidden />
+          <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-gray-600 shadow-sm">
             SoundLife
           </div>
 
-          {/* Headline */}
-          <h1 className="mt-7 max-w-3xl text-5xl font-black leading-[0.93] tracking-tight text-ink sm:text-6xl lg:text-7xl">
+          <h1 className="mt-8 max-w-3xl text-5xl font-black leading-[0.94] tracking-tight text-ink sm:text-6xl lg:text-7xl">
             Find the playlist your mood was trying to explain.
           </h1>
 
-          {/* Subline */}
-          <p className="mt-6 max-w-xl text-lg font-semibold leading-8 text-muted sm:text-xl">
-            Swipe a few instincts. Get a music identity, a shareable card, and a tracklist that
-            sounds less algorithmic and more like &quot;that is unfortunately me.&quot;
+          <p className="mt-6 max-w-xl text-base font-semibold leading-7 text-muted sm:text-lg">
+            Swipe a few cards. Get your sound identity and a playlist that actually feels like you.
           </p>
 
-          {/* Rotating quip */}
-          <div className="mt-5 min-h-[32px]">
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={lineIndex}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.26 }}
-                className="text-base font-black text-brand-amber sm:text-lg"
-              >
-                {VIRAL_LINES[lineIndex]}
-              </motion.p>
-            </AnimatePresence>
-          </div>
-
-          {/* CTA */}
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-8">
             <motion.button
               type="button"
               onClick={onStart}
-              whileHover={{ y: -2, scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              className="min-h-[58px] rounded-full bg-ink px-8 text-base font-black text-white shadow-card-lg transition-colors hover:bg-gray-800"
+              whileHover={{ y: -2, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              className="min-h-[58px] rounded-full bg-ink px-9 text-base font-black text-white shadow-card-lg transition-colors hover:bg-gray-800"
             >
-              Sound of the Day →
+              Start swiping
             </motion.button>
-            {onChooseScene && (
-              <button
-                type="button"
-                onClick={onChooseScene}
-                className="min-h-[58px] rounded-full border border-gray-200 bg-white px-6 text-sm font-black text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
-              >
-                Choose a scene
-              </button>
-            )}
-            <p className="text-sm font-medium text-gray-400">
-              No account. No history. 30 seconds.
+            <p className="mt-3 text-sm font-semibold text-gray-400">
+              No login. 30 seconds.
             </p>
           </div>
+        </motion.div>
 
-          {/* How it works */}
-          <div className="mt-9 grid gap-3 sm:grid-cols-3">
-            {STEPS.map((step, i) => (
-              <motion.div
-                key={step.eyebrow}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.12 + i * 0.07 }}
-                className="rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm"
-              >
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-teal">
-                  {step.eyebrow}
-                </p>
-                <p className="mt-2 text-sm font-medium leading-5 text-gray-600">
-                  {step.copy}
-                </p>
-              </motion.div>
-            ))}
-          </div>
+        <SwipePreviewCard />
+      </section>
 
-          {/* Result examples */}
-          <div className="mt-7">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-gray-400">
-              Sample identities
+      {onChooseScene && (
+        <section className="pb-20 pt-6">
+          <div className="mx-auto max-w-sm rounded-2xl border border-gray-100 bg-white/50 px-6 py-5 text-center">
+            <p className="text-sm font-black text-ink">Want a specific vibe?</p>
+            <p className="mt-2 text-sm font-medium leading-6 text-gray-500">
+              Pick a scene like drive, gym, focus, party, heartbreak, or chill.
             </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {RESULT_EXAMPLES.map((r) => (
-                <span
-                  key={r.label}
-                  className="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-bold"
-                  style={{
-                    borderColor: `${r.color}33`,
-                    color: r.color,
-                    backgroundColor: `${r.color}0D`,
-                  }}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: r.color }} />
-                  {r.label}
-                </span>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={onChooseScene}
+              className="mt-4 min-h-[40px] rounded-full border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-800"
+            >
+              Choose a scene
+            </button>
           </div>
-
-          {profile.totalIdentities > 0 && (
-            <div className="mt-7 grid gap-3 sm:grid-cols-[0.78fr_1.22fr]">
-              <StreakBadge profile={profile} compact />
-              <CollectionGrid items={profile.collection} limit={3} />
-            </div>
-          )}
-        </motion.section>
-
-        {/* Right: mock swipe preview */}
-        <MockSwipePreview />
-      </div>
+        </section>
+      )}
     </div>
   );
 }

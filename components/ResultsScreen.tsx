@@ -8,10 +8,14 @@ import SongCard from "./SongCard";
 import StreakBadge from "./StreakBadge";
 import TraitBar from "./TraitBar";
 import { TRAIT_META, TRAIT_VERDICTS } from "@/lib/data";
-import { getFilter } from "@/lib/engine";
+import { getFilter, logResultScoreDebug } from "@/lib/engine";
 import { encodeResultParams } from "@/lib/match";
 import { buildShareText, copyToClipboard } from "@/lib/share";
-import { getPlatformLinks } from "@/lib/platforms";
+import { getPlatformLinks, type PlatformId } from "@/lib/platforms";
+import {
+  beginSpotifyPlaylistExport,
+  isSpotifyPlaylistExportConfigured,
+} from "@/lib/spotify";
 import { getStorageJson, setStorageJson } from "@/lib/storage";
 import {
   EMPTY_PROFILE_STATE,
@@ -61,6 +65,10 @@ function songNote(song: Song, group: SongGroup["title"], identity: string): stri
 /* ── Playlist mode ── */
 function PlaylistMode({ result }: { result: ResultData }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [openPlatform, setOpenPlatform] = useState<PlatformId>("spotify");
+  const [openedCount, setOpenedCount] = useState(0);
+  const [spotifyConnecting, setSpotifyConnecting] = useState(false);
+  const spotifyExportConfigured = isSpotifyPlaylistExportConfigured();
 
   const copy = async (text: string, label: string) => {
     const ok = await copyToClipboard(text);
@@ -80,9 +88,31 @@ function PlaylistMode({ result }: { result: ResultData }) {
     .map((s, i) => `${i + 1}. ${s.title} — ${s.artist}`)
     .join("\n")}`;
 
-  const firstSpotify = result.songs[0]
-    ? getPlatformLinks(result.songs[0])[0]?.href
-    : null;
+  const openNextSong = () => {
+    if (typeof window === "undefined" || result.songs.length === 0) return;
+    const nextIndex = openedCount % result.songs.length;
+    const song = result.songs[nextIndex];
+    const href = getPlatformLinks(song).find((link) => link.id === openPlatform)?.href;
+    if (!href) return;
+    window.open(href, "_blank", "noopener,noreferrer");
+    setOpenedCount((count) => Math.min(count + 1, result.songs.length));
+  };
+
+  const connectSpotify = async () => {
+    if (!spotifyExportConfigured || spotifyConnecting) return;
+    setSpotifyConnecting(true);
+    try {
+      await beginSpotifyPlaylistExport(result);
+    } catch {
+      setSpotifyConnecting(false);
+    }
+  };
+
+  const platformOptions: Array<{ id: PlatformId; label: string; color: string }> = [
+    { id: "spotify", label: "Spotify", color: "#1DB954" },
+    { id: "youtube-music", label: "YouTube Music", color: "#FF4444" },
+    { id: "apple-music", label: "Apple Music", color: "#FA243C" },
+  ];
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -148,33 +178,73 @@ function PlaylistMode({ result }: { result: ResultData }) {
         </button>
       </div>
 
-      {/* Open first song */}
-      {firstSpotify && (
-        <a
-          href={firstSpotify}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-50 active:scale-95"
+      <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3">
+        <div
+          className="grid grid-cols-3 gap-1.5 rounded-2xl border border-gray-200 bg-white p-1.5"
+          role="radiogroup"
+          aria-label="Open next song platform"
         >
-          ▶ Open first song on Spotify
-        </a>
-      )}
+          {platformOptions.map((platform) => {
+            const active = openPlatform === platform.id;
+            return (
+              <button
+                key={platform.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setOpenPlatform(platform.id)}
+                className={`min-h-[38px] rounded-xl px-2 text-[11px] font-black transition-colors ${
+                  active ? "text-white" : "text-gray-500 hover:bg-gray-50"
+                }`}
+                style={{ backgroundColor: active ? platform.color : undefined }}
+              >
+                {platform.label}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={openNextSong}
+          className="mt-3 flex min-h-[44px] w-full items-center justify-center rounded-full bg-ink px-4 text-sm font-black text-white transition-colors hover:bg-gray-800 active:scale-95"
+        >
+          Open next song
+        </button>
+        <p className="mt-2 text-center text-xs font-bold text-gray-400">
+          {Math.min(openedCount, result.songs.length)} / {result.songs.length} opened
+        </p>
+      </div>
 
       {/* Coming soon CTAs */}
       <div className="mt-3 flex flex-col gap-2">
         <button
           type="button"
-          disabled
-          className="flex min-h-[40px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-dashed border-green-200 bg-green-50/50 px-4 text-xs font-bold text-green-400"
+          onClick={connectSpotify}
+          disabled={!spotifyExportConfigured || spotifyConnecting}
+          className={`flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border px-4 text-xs font-black transition-colors ${
+            spotifyExportConfigured
+              ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-60"
+              : "cursor-not-allowed border-dashed border-green-200 bg-green-50/50 text-green-400"
+          }`}
         >
-          🟢 Create Spotify playlist — coming soon (requires login)
+          🟢{" "}
+          {spotifyExportConfigured
+            ? spotifyConnecting
+              ? "Connecting Spotify..."
+              : "Connect Spotify to create playlist"
+            : "Spotify playlist export — coming soon"}
         </button>
+        {spotifyExportConfigured && (
+          <p className="px-1 text-xs font-semibold leading-5 text-gray-500">
+            Requires Spotify login. We&apos;ll create a private playlist from this result.
+          </p>
+        )}
         <button
           type="button"
           disabled
           className="flex min-h-[40px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-dashed border-red-200 bg-red-50/50 px-4 text-xs font-bold text-red-400"
         >
-          ▶ Create YouTube playlist — coming soon (requires login)
+          ▶ Create YouTube playlist — coming soon
         </button>
       </div>
     </div>
@@ -199,6 +269,10 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
   }, [toast]);
 
   useEffect(() => {
+    logResultScoreDebug(result);
+  }, [result]);
+
+  useEffect(() => {
     setProfile(getStorageJson("profile", EMPTY_PROFILE_STATE));
   }, []);
 
@@ -214,6 +288,13 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
     const next = updateSoundLifeProfile(current, item.discoveredAt, item);
     setProfile(next);
     setStorageJson("profile", next);
+
+    const recent = getStorageJson<string[]>("recentSongIds", []);
+    const nextRecent = [
+      ...result.songs.map((song) => song.id),
+      ...recent.filter((id) => !result.songs.some((song) => song.id === id)),
+    ].slice(0, 60);
+    setStorageJson("recentSongIds", nextRecent);
   }, [result]);
 
   const handleCopyShare = async () => {
@@ -301,7 +382,10 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
           {/* Why this matched */}
           <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-amber">
-              This is suspiciously accurate because...
+              Why this playlist
+            </p>
+            <p className="mt-2 text-sm font-bold leading-6 text-gray-600">
+              You got this because you vibed with {result.whyMatched.vibedWith.join(" + ")} and rejected {result.whyMatched.rejected}
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-gray-50 p-4">
@@ -329,6 +413,73 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
                 </p>
               </div>
             </div>
+            <div className="mt-3 rounded-2xl bg-gray-50 p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">
+                We avoided
+              </p>
+              <p className="mt-2 text-sm font-black leading-5 text-ink">
+                {result.whyMatched.avoided && result.whyMatched.avoided.length > 0
+                  ? result.whyMatched.avoided.join(" / ")
+                  : "repeat artists, recent songs, and obvious-popular autopilot."}
+              </p>
+              {result.playlistWarnings?.map((warning) => (
+                <p key={warning} className="mt-2 text-xs font-bold leading-5 text-amber-600">
+                  {warning}
+                </p>
+              ))}
+            </div>
+            {process.env.NODE_ENV !== "production" && result.scoreDebug && (
+              <details className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-white p-3">
+                <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-gray-400">
+                  Scoring debug
+                </summary>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="min-w-[860px] text-left text-[11px]">
+                    <thead className="text-gray-400">
+                      <tr>
+                        {[
+                          "Song",
+                          "Trait",
+                          "Scenario",
+                          "Genre",
+                          "Language",
+                          "Popularity",
+                          "Dislike",
+                          "Blocked",
+                          "Diversity",
+                          "Final",
+                          "Why",
+                        ].map((label) => (
+                          <th key={label} className="px-2 py-1 font-black uppercase">
+                            {label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.scoreDebug.map((row) => (
+                        <tr key={row.songId} className="border-t border-gray-100">
+                          <td className="px-2 py-1 font-bold text-ink">
+                            {row.title}
+                            <span className="block font-medium text-gray-400">{row.artist}</span>
+                          </td>
+                          <td className="px-2 py-1">{row.baseTraitScore}</td>
+                          <td className="px-2 py-1">{row.scenarioBonus}</td>
+                          <td className="px-2 py-1">{row.genreBonus}</td>
+                          <td className="px-2 py-1">{row.languageBonus}</td>
+                          <td className="px-2 py-1">{row.popularityBonus}</td>
+                          <td className="px-2 py-1">{row.dislikePenalty}</td>
+                          <td className="px-2 py-1">{row.blockedGenrePenalty}</td>
+                          <td className="px-2 py-1">{row.diversityPenalty}</td>
+                          <td className="px-2 py-1 font-black">{row.finalScore}</td>
+                          <td className="px-2 py-1 text-gray-500">{row.whyMatched.join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
           </section>
 
           {/* CTA buttons */}

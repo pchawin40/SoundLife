@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "audit:card-images": "tsx scripts/audit-card-images.ts",
     "generate:og": "tsx scripts/generate-og.ts",
     "generate:card-images": "tsx scripts/generate-card-images.ts",
     "prebuild": "npm run generate:og",

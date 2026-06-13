@@ -1,6 +1,8 @@
 # Card Image Generation
 
-SoundLife card photos are generated offline with a Node script. They are **not** created during `npm run dev` or `npm run build`, and the OpenAI key never ships to the browser.
+SoundLife card art is generated offline with a Node script. Images are **not** created during `npm run dev` or `npm run build`, and the OpenAI key never ships to the browser.
+
+Default style is **editorial-photo**: realistic editorial lifestyle photography with a candid documentary feel, atmospheric scenes, natural imperfect lighting, subtle film grain, and playlist-cover composition.
 
 ## Prerequisites
 
@@ -10,13 +12,19 @@ SoundLife card photos are generated offline with a Node script. They are **not**
 OPENAI_API_KEY=sk-...
 ```
 
-2. Optional: install `sharp` for PNG → JPG conversion when the script falls back to `dall-e-3`:
+The script loads Next-style env files automatically with `@next/env`, including `.env.local` and `.env`. A normal shell export still works too:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+Keep this server/script-only. Do not use `NEXT_PUBLIC_OPENAI_API_KEY`.
+
+2. Install dependencies:
 
 ```bash
 npm install
 ```
-
-`sharp` is an optional dev dependency. If it is missing, `gpt-image-1` JPEG output still works; DALL·E fallback may save PNG bytes with a `.jpg` extension.
 
 ## Generate images
 
@@ -24,26 +32,56 @@ npm install
 npm run generate:card-images
 ```
 
-Useful flags:
+This defaults to `--style editorial-photo`.
+
+Run the image audit any time mappings or assets change:
+
+```bash
+npm run audit:card-images
+```
+
+### Style modes
+
+| Style | Use when |
+| --- | --- |
+| `editorial-photo` (default) | Realistic editorial scene photography, least AI-looking |
+| `realistic` | Alias-style photo mode using the same safer editorial rules |
+| `editorial` | Alias-style photo mode using the same safer editorial rules |
+| `elephant` | Deprecated/experimental mascot illustration mode |
+| `cartoon` | Deprecated generic cartoon illustration prompts |
+
+### Useful flags
 
 | Flag | Description |
 | --- | --- |
+| `--style editorial-photo` | Editorial photo prompts (default) |
+| `--style realistic` | Photo prompts with the same anti-AI safety suffix |
+| `--style elephant` | Deprecated elephant mascot prompts |
 | `--dry-run` | Print jobs and prompts without calling OpenAI |
-| `--limit 10` | Generate only the first 10 unique output files |
-| `--only no-lyrics-please,tokyo-night-drive` | Filter by output slug or card id |
-| `--force` | Regenerate even when the JPG already exists |
+| `--limit 10` | Generate only the first 10 card image jobs |
+| `--only no-lyrics,tokyo-neon-walk` | Filter by card id or output slug |
+| `--force` | Overwrite existing JPGs |
+| `--unique-per-card` | Generate one output file per card id (default) |
+| `--dedupe` | Legacy mode: share output files when cards map to the same image path |
 
-Examples:
+### Examples
 
 ```bash
-# Preview the first 5 jobs
-npm run generate:card-images -- --dry-run --limit 5
+# Preview editorial-photo prompts
+npm run generate:card-images -- --style editorial-photo --limit 10
 
-# Generate two priority assets
-npm run generate:card-images -- --only no-lyrics-please,tokyo-night-drive
+# Regenerate selected editorial-photo assets
+npm run generate:card-images -- --style editorial-photo --only no-lyrics,tokyo-neon-walk --force
 
-# Regenerate one card
-npm run generate:card-images -- --only gym-villain --force
+# Regenerate one bad image
+npm run generate:card-images -- --style editorial-photo --only card-id-or-output-slug --force
+
+# Generate missing editorial-photo JPGs
+npm run generate:card-images -- --style editorial-photo
+
+# Regenerate one bad or blurry card from scratch
+rm public/images/cards/road-trip.jpg
+npm run generate:card-images -- --style editorial-photo --only road-trip --force
 ```
 
 ## Output location
@@ -54,28 +92,69 @@ Images are written to:
 public/images/cards/{output-slug}.jpg
 ```
 
-Output slugs come from `lib/cardVisualMap.ts` (`imageUrl`), not always the raw card id. For example:
+Output slugs come from `lib/cardVisualMap.ts` (`imageUrl`). By default, every card maps to its own card-id filename:
 
 | Card id | Output file |
 | --- | --- |
-| `no-lyrics` | `no-lyrics-please.jpg` |
-| `gym-villain` | `gym-villain-mode.jpg` |
-| `tokyo-neon-walk` | `tokyo-night-drive.jpg` |
+| `no-lyrics` | `no-lyrics.jpg` |
+| `gym-villain` | `gym-villain.jpg` |
+| `tokyo-neon-walk` | `tokyo-neon-walk.jpg` |
 
-Shared filenames are generated once and reused by every card that points at the same `imageUrl`.
+Each card should normally map to its own generated JPG at `/images/cards/{card-id}.jpg`. Shared filenames are deprecated and should only be used intentionally with `--dedupe`.
+
+Existing images are skipped unless you pass `--force`.
 
 ## Prompt sources
 
 The script merges prompts in this order:
 
-1. `visualPrompt` from `lib/cardVisualMap.ts`
-2. Matching row in `docs/card-image-prompts.md`
-3. Theme-based fallback derived from `visualTheme`, title, and subtitle
+**Editorial-photo / realistic / editorial**
 
-Every prompt is normalized to include:
+1. Matching row in `docs/card-image-prompts.md`
+2. `visualPrompt` from `lib/cardVisualMap.ts`
+3. Theme-based editorial-photo fallback from `visualTheme`, title, and subtitle
+
+**Elephant / cartoon**
+
+Deprecated illustration modes still work when explicitly requested, but are no longer the default.
+
+## Audit Expectations
+
+`npm run audit:card-images` reports:
+
+- duplicate image mappings
+- missing generated JPG files
+- cards using legacy `/vibes/*.png`
+- cards using generated `/images/cards/*.jpg`
+- existing generated JPG files
+- cards with no `imageUrl`
+- image dimensions and file size when available
+
+After changing mappings to unique per-card paths, missing files are expected until you regenerate the editorial-photo JPGs.
+
+### Editorial-photo base prompt
 
 ```text
-realistic editorial lifestyle photo, modern consumer music app card, cinematic natural lighting, human-feeling, no text, no logos, no watermark, no distorted faces, no extra fingers
+realistic editorial lifestyle photograph for a music discovery app, candid documentary feel, atmospheric scene, natural imperfect lighting, subtle film grain, playlist-cover composition, no text, no logos, no watermark, no celebrity, no album art, no close-up face, no distorted hands, no extra fingers, not overly polished, not glossy AI stock photo
+```
+
+Composition rules:
+
+- Prefer back-facing people, silhouettes, cropped figures, or no people.
+- Prefer environments and objects over faces.
+- Avoid fake influencer/model portraits.
+- Avoid direct face closeups and detailed hands.
+- Do not use copyrighted album art, artist imagery, or identifiable celebrity faces.
+- Make the image feel like a playlist cover or film still.
+
+## Quality review
+
+Review generated images before committing them. Reject images with fake-looking faces, weird hands, extra limbs, text, logos, watermarks, celebrity resemblance, album art, copyrighted artist imagery, or a glossy AI stock-photo look.
+
+To retry a bad image, delete the bad JPG or overwrite it with `--force`:
+
+```bash
+npm run generate:card-images -- --style editorial-photo --only card-id-or-output-slug --force
 ```
 
 ## API behavior
@@ -88,13 +167,8 @@ realistic editorial lifestyle photo, modern consumer music app card, cinematic n
 ## Static export safety
 
 - `OPENAI_API_KEY` is read only in `scripts/generate-card-images.ts`
+- `.env.local`, `.env`, and existing shell environment variables are loaded before generation
 - No `NEXT_PUBLIC_OPENAI_*` variable exists
 - `npm run build` does not run image generation automatically
-
-## Recommended first batch
-
-```bash
-npm run generate:card-images -- --only no-lyrics-please,tokyo-night-drive,rainy-coffee-shop,gym-villain-mode,soft-beach-sunset,dark-club,acoustic-morning,korean-night-drive,thai-pop-glow,afrobeats-sunshine
-```
 
 After images exist, reload the app. Cards use JPG first, then legacy `/vibes/*.png`, then themed gradients.

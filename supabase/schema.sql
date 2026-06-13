@@ -17,6 +17,7 @@ create table if not exists public.songs (
   genres text[] not null default '{}',
   moods text[] not null default '{}',
   era text,
+  spotify_uri text,
   spotify_url text,
   apple_music_url text,
   youtube_music_url text,
@@ -102,6 +103,7 @@ create unique index if not exists songs_title_artist_key
 
 do $$
 begin
+  alter table public.songs add column if not exists spotify_uri text;
   alter table public.songs add column if not exists preview_url text;
   alter table public.songs add column if not exists artwork_url text;
   alter table public.songs add column if not exists itunes_track_id text;
