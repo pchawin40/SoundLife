@@ -239,13 +239,6 @@ function PlaylistMode({ result }: { result: ResultData }) {
             Requires Spotify login. We&apos;ll create a private playlist from this result.
           </p>
         )}
-        <button
-          type="button"
-          disabled
-          className="flex min-h-[40px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-dashed border-red-200 bg-red-50/50 px-4 text-xs font-bold text-red-400"
-        >
-          ▶ Create YouTube playlist — coming soon
-        </button>
       </div>
     </div>
   );
@@ -253,7 +246,6 @@ function PlaylistMode({ result }: { result: ResultData }) {
 
 export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreenProps) {
   const [toast, setToast] = useState<string | null>(null);
-  const [showPlaylist, setShowPlaylist] = useState(false);
   const [profile, setProfile] = useState<SoundLifeProfileState>(EMPTY_PROFILE_STATE);
   const savedResult = useRef<string | null>(null);
   const scenario = catalog.scenarios.find((s) => s.id === result.scenarioId);
@@ -370,6 +362,26 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
                 &quot;{verdict}&quot;
               </p>
             </div>
+
+            {/* Best for / Aux warning */}
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-teal-100 bg-teal-50/60 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-teal-600">
+                  Best for
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-teal-900">
+                  {result.archetype.bestFor}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
+                  Aux warning
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-amber-900">
+                  {result.archetype.dangerousAround}
+                </p>
+              </div>
+            </div>
           </motion.div>
 
           {result.likedCount === 0 && (
@@ -383,9 +395,6 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
           <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-amber">
               Why this playlist
-            </p>
-            <p className="mt-2 text-sm font-bold leading-6 text-gray-600">
-              You got this because you vibed with {result.whyMatched.vibedWith.join(" + ")} and rejected {result.whyMatched.rejected}
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-gray-50 p-4">
@@ -522,35 +531,12 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
             </div>
           </section>
 
-          {/* Playlist mode toggle */}
+          {/* Playlist mode */}
           <section className="mt-10">
-            <div className="flex items-center justify-between gap-3">
-              <SectionTitle>Playlist Mode</SectionTitle>
-              <button
-                type="button"
-                onClick={() => setShowPlaylist((v) => !v)}
-                className={`rounded-full border px-4 py-1.5 text-xs font-black transition-colors ${
-                  showPlaylist
-                    ? "border-brand-teal bg-brand-teal text-white"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-brand-teal/30"
-                }`}
-              >
-                {showPlaylist ? "▲ Hide" : "▼ View playlist"}
-              </button>
+            <SectionTitle>Playlist Mode</SectionTitle>
+            <div className="mt-4">
+              <PlaylistMode result={result} />
             </div>
-            <AnimatePresence>
-              {showPlaylist && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-4 overflow-hidden"
-                >
-                  <PlaylistMode result={result} />
-                </motion.div>
-              )}
-            </AnimatePresence>
           </section>
 
           {/* Tracklist */}
@@ -605,15 +591,21 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
 
           {/* Artists */}
           <section className="mt-10">
-            <SectionTitle>Artists to fall into</SectionTitle>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <SectionTitle>Artists to fall into</SectionTitle>
+              <span className="text-xs font-semibold text-gray-400">opens Spotify search</span>
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {result.artists.map((artist) => (
-                <span
+                <a
                   key={artist}
-                  className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm"
+                  href={`https://open.spotify.com/search/${encodeURIComponent(artist)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
                 >
                   {artist}
-                </span>
+                </a>
               ))}
             </div>
           </section>

@@ -75,6 +75,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
   const [partyMode, setPartyMode] = useState(false);
   const [hapticsOn, setHapticsOn] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showSuperTooltip, setShowSuperTooltip] = useState(false);
   const finishTimer = useRef<number | null>(null);
   const transitionLock = useRef(false);
 
@@ -170,6 +171,21 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
 
   useEffect(() => {
     setHapticsOn(getHapticsEnabled());
+    const seen = typeof window !== "undefined"
+      ? localStorage.getItem("superVibeTooltipSeen")
+      : "1";
+    if (!seen) {
+      setShowSuperTooltip(true);
+      const t = window.setTimeout(() => {
+        setShowSuperTooltip(false);
+        localStorage.setItem("superVibeTooltipSeen", "1");
+      }, 5000);
+      return () => {
+        window.clearTimeout(t);
+        clearFinishTimer();
+        pausePreview();
+      };
+    }
     return () => {
       clearFinishTimer();
       pausePreview();
@@ -413,16 +429,37 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
           >
             ↩
           </button>
-          <button
-            type="button"
-            onClick={() => handleSwipe(2)}
-            disabled={done || isTransitioning}
-            aria-label="Super Vibe"
-            className="flex min-h-[56px] items-center justify-center rounded-full border border-yellow-300 bg-yellow-50 text-lg font-black text-yellow-600 transition-all hover:bg-yellow-100 active:scale-95 disabled:opacity-40"
-            title="Super Vibe"
-          >
-            ↑
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => handleSwipe(2)}
+              disabled={done || isTransitioning}
+              aria-label="Super Vibe"
+              className="flex min-h-[56px] w-[56px] items-center justify-center rounded-full border border-yellow-300 bg-yellow-50 text-lg font-black text-yellow-600 transition-all hover:bg-yellow-100 active:scale-95 disabled:opacity-40"
+              title="Super Vibe"
+            >
+              ↑
+            </button>
+            <AnimatePresence>
+              {showSuperTooltip && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-[calc(100%+10px)] left-1/2 z-20 w-36 -translate-x-1/2 rounded-2xl border border-yellow-200 bg-yellow-50 px-3 py-2.5 text-center shadow-card"
+                >
+                  <p className="text-[11px] font-black leading-4 text-yellow-800">
+                    ↑ Super Vibe
+                  </p>
+                  <p className="mt-1 text-[10px] font-medium leading-4 text-yellow-600">
+                    Swipe up to double the weight of this card.
+                  </p>
+                  <span className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-yellow-200 bg-yellow-50" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <button
             type="button"
             onClick={() => handleSwipe(1)}

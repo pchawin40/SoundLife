@@ -29,6 +29,14 @@ export default function CollectionGrid({ items, limit = 6 }: CollectionGridProps
             {items.length > 0 ? `${items.length} discovered` : "No identities yet"}
           </h3>
         </div>
+        {items.length > 0 && (
+          <a
+            href="/collection"
+            className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-black text-gray-500 transition-colors hover:bg-white hover:text-gray-800"
+          >
+            View all →
+          </a>
+        )}
       </div>
 
       {visible.length > 0 ? (

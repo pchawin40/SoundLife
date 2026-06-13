@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import PlatformButtons from "./PlatformButtons";
-import { togglePreview } from "@/lib/audio";
+import {
+  getAudioSnapshot,
+  subscribeAudio,
+  togglePreview,
+  pausePreview,
+} from "@/lib/audio";
 import type { Song } from "@/lib/types";
 
 interface SongCardProps {
@@ -19,8 +24,85 @@ function formatSlug(slug: string): string {
     .join(" ");
 }
 
+function formatTime(seconds: number): string {
+  if (!isFinite(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function AudioPreview({ previewUrl }: { previewUrl: string }) {
+  const snap = useSyncExternalStore(
+    subscribeAudio,
+    () => getAudioSnapshot(previewUrl),
+    () => ({ state: "idle" as const, currentTime: 0, duration: 0 })
+  );
+
+  useEffect(() => {
+    return () => {
+      pausePreview();
+    };
+  }, []);
+
+  const handleToggle = async () => {
+    await togglePreview(previewUrl);
+  };
+
+  const { state, currentTime, duration } = snap;
+  const isActive = state === "playing" || state === "loading" || state === "paused";
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="mt-4 rounded-2xl border border-pink-100 bg-pink-50/60 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={handleToggle}
+          disabled={state === "loading"}
+          className="min-h-[38px] rounded-full bg-ink px-4 text-xs font-black text-white transition-colors hover:bg-gray-800 active:scale-95 disabled:opacity-60"
+        >
+          {state === "loading"
+            ? "Loading…"
+            : state === "playing"
+              ? "⏸ Pause"
+              : "▶ Preview"}
+        </button>
+        <span className="rounded-full border border-pink-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-pink-600">
+          iTunes preview
+        </span>
+      </div>
+
+      {isActive && (
+        <div className="mt-3">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-pink-200">
+            <div
+              className="h-full rounded-full bg-pink-500 transition-all duration-200"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] font-semibold text-pink-400">
+            <span>{formatTime(currentTime)}</span>
+            {duration > 0 && <span>{formatTime(duration)}</span>}
+          </div>
+        </div>
+      )}
+
+      {state === "failed" && (
+        <p className="mt-2 text-[11px] font-semibold text-red-500">
+          Preview unavailable — open on a streaming platform below.
+        </p>
+      )}
+
+      {state !== "failed" && (
+        <p className="mt-2 text-[10px] font-semibold leading-4 text-pink-500">
+          Preview provided courtesy of iTunes. Stream only, never cached.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function SongCard({ song, rank, resultIdentity, note }: SongCardProps) {
-  const [previewing, setPreviewing] = useState(false);
   const metaChips = [
     song.language !== "english" && song.language !== "instrumental"
       ? formatSlug(song.language)
@@ -30,12 +112,6 @@ export default function SongCard({ song, rank, resultIdentity, note }: SongCardP
   ].filter((c): c is string => Boolean(c));
 
   const reason = note ?? `A strong fit for ${resultIdentity ?? "this result"}.`;
-
-  const handlePreview = async () => {
-    if (!song.previewUrl) return;
-    const state = await togglePreview(song.previewUrl);
-    setPreviewing(state === "playing");
-  };
 
   return (
     <article className="rounded-[20px] border border-gray-100 bg-white p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-lg sm:p-5">
@@ -82,25 +158,7 @@ export default function SongCard({ song, rank, resultIdentity, note }: SongCardP
         ))}
       </div>
 
-      {song.previewUrl && (
-        <div className="mt-4 rounded-2xl border border-pink-100 bg-pink-50/60 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={handlePreview}
-              className="min-h-[38px] rounded-full bg-ink px-4 text-xs font-black text-white transition-colors hover:bg-gray-800 active:scale-95"
-            >
-              {previewing ? "Pause preview" : "Play preview"}
-            </button>
-            <span className="rounded-full border border-pink-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-pink-600">
-              iTunes preview
-            </span>
-          </div>
-          <p className="mt-2 text-[10px] font-semibold leading-4 text-pink-500">
-            Preview provided courtesy of iTunes. Stream only, never cached.
-          </p>
-        </div>
-      )}
+      {song.previewUrl && <AudioPreview previewUrl={song.previewUrl} />}
 
       <div className="mt-4">
         <PlatformButtons song={song} resultIdentity={resultIdentity} compact />

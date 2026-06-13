@@ -26,6 +26,7 @@ export default function Home() {
   const [step, setStep] = useState<Step>("landing");
   const [filter, setFilter] = useState<FilterId>("global");
   const [roastIntensity, setRoastIntensity] = useState<RoastIntensity>("accurate");
+  const [deckLength, setDeckLength] = useState<number>(10);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [deck, setDeck] = useState<VibeCardData[]>([]);
 
@@ -35,7 +36,7 @@ export default function Home() {
 
   const pickScenario = (next: Scenario) => {
     setScenario(next);
-    setDeck(buildDeck(catalog, next));
+    setDeck(buildDeck(catalog, next).slice(0, deckLength));
     setStep("swipe");
   };
 
@@ -125,8 +126,10 @@ export default function Home() {
                 scenarios={catalog.scenarios}
                 filter={filter}
                 roastIntensity={roastIntensity}
+                deckLength={deckLength}
                 onFilterChange={setFilter}
                 onRoastIntensityChange={setRoastIntensity}
+                onDeckLengthChange={setDeckLength}
                 onSelect={pickScenario}
               />
             )}

@@ -8,8 +8,10 @@ interface ScenarioPickerProps {
   scenarios: Scenario[];
   filter: FilterId;
   roastIntensity: RoastIntensity;
+  deckLength: number;
   onFilterChange: (id: FilterId) => void;
   onRoastIntensityChange: (intensity: RoastIntensity) => void;
+  onDeckLengthChange: (n: number) => void;
   onSelect: (scenario: Scenario) => void;
 }
 
@@ -55,8 +57,10 @@ export default function ScenarioPicker({
   scenarios,
   filter,
   roastIntensity,
+  deckLength,
   onFilterChange,
   onRoastIntensityChange,
+  onDeckLengthChange,
   onSelect,
 }: ScenarioPickerProps) {
   const roastOptions: Array<{ id: RoastIntensity; label: string; note: string }> = [
@@ -171,7 +175,47 @@ export default function ScenarioPicker({
             </p>
           </div>
 
-          <div className="min-w-0">
+          <div className="min-w-0 space-y-5">
+            {/* Deck length */}
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
+                Deck size
+              </p>
+              <div
+                className="mt-2.5 grid grid-cols-2 gap-1.5 rounded-2xl border border-gray-200 bg-gray-50 p-1.5"
+                role="radiogroup"
+                aria-label="Deck size"
+              >
+                {([5, 10] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    role="radio"
+                    aria-checked={deckLength === n}
+                    onClick={() => onDeckLengthChange(n)}
+                    className={`min-h-[44px] rounded-xl px-2 text-center text-xs font-black transition-all ${
+                      deckLength === n
+                        ? "bg-ink text-white shadow-sm"
+                        : "bg-transparent text-gray-500 hover:bg-white hover:text-ink"
+                    }`}
+                  >
+                    <span className="block">{n === 5 ? "Quick" : "Full"}</span>
+                    <span
+                      className={`mt-0.5 block text-[10px] font-bold ${
+                        deckLength === n ? "text-white/60" : "text-gray-400"
+                      }`}
+                    >
+                      {n} cards
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs font-medium text-gray-400">
+                Quick gives a faster but less precise identity.
+              </p>
+            </div>
+
+            <div>
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
               Result tone
             </p>
@@ -210,6 +254,7 @@ export default function ScenarioPicker({
             <p className="mt-3 text-xs font-medium text-gray-400">
               Choose how directly SoundLife is allowed to talk about you.
             </p>
+            </div>
           </div>
         </div>
       </motion.div>
