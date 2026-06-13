@@ -15,12 +15,7 @@ function formatSlug(slug: string): string {
     .join(" ");
 }
 
-export default function SongCard({
-  song,
-  rank,
-  resultIdentity,
-  note,
-}: SongCardProps) {
+export default function SongCard({ song, rank, resultIdentity, note }: SongCardProps) {
   const metaChips = [
     song.language !== "english" && song.language !== "instrumental"
       ? formatSlug(song.language)
@@ -32,32 +27,32 @@ export default function SongCard({
   const reason = note ?? `A strong fit for ${resultIdentity ?? "this result"}.`;
 
   return (
-    <article className="rounded-[22px] border border-white/10 bg-[#17130f] p-4 shadow-card transition-transform duration-200 hover:-translate-y-0.5 hover:border-white/20 sm:p-5">
+    <article className="rounded-[20px] border border-gray-100 bg-white p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-lg sm:p-5">
       <div className="flex items-start justify-between gap-4">
-        <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-black tabular-nums text-cream/50">
+        <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-black tabular-nums text-gray-400">
           {String(rank).padStart(2, "0")}
         </span>
         {metaChips.length > 0 && (
-          <span className="min-w-0 text-right text-[10px] font-black uppercase tracking-[0.13em] text-cream/40">
+          <span className="min-w-0 text-right text-[10px] font-black uppercase tracking-[0.13em] text-gray-400">
             {metaChips.join(" · ")}
           </span>
         )}
       </div>
 
       <div className="mt-4">
-        <h4 className="text-xl font-black leading-tight tracking-tight text-cream">
+        <h4 className="text-xl font-black leading-tight tracking-tight text-ink">
           {song.title}
         </h4>
-        <p className="mt-1 text-sm font-semibold text-cream/60">{song.artist}</p>
+        <p className="mt-1 text-sm font-semibold text-gray-500">{song.artist}</p>
       </div>
 
-      <p className="mt-4 text-sm font-medium leading-6 text-cream/60">{reason}</p>
+      <p className="mt-3 text-sm font-medium leading-6 text-gray-500">{reason}</p>
 
       <div className="mt-4 flex flex-wrap gap-1.5">
         {song.chips.slice(0, 3).map((chip) => (
           <span
             key={chip.label}
-            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-cream/75"
+            className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-600"
           >
             <span aria-hidden>{chip.emoji}</span>
             {chip.label}

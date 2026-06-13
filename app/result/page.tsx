@@ -15,8 +15,8 @@ import type { Catalog, FilterId, VibeCardData } from "@/lib/types";
 const BUILDING_DELAY_MS = 1600;
 
 /**
- * Shareable, query-param based result page (static-export friendly —
- * no dynamic route segment): /result?s=gym&cards=boxing,spicy-food&lang=korean
+ * Shareable, query-param based result page (static-export friendly):
+ * /result?s=gym&cards=boxing,spicy-food&super=gym-villain&lang=korean
  */
 export default function ResultPage() {
   return (
@@ -51,6 +51,10 @@ function ResultContent() {
     () => (params.get("cards") ?? "").split(",").filter(Boolean),
     [params]
   );
+  const superIds = useMemo(
+    () => (params.get("super") ?? "").split(",").filter(Boolean),
+    [params]
+  );
   const lang = (params.get("lang") ?? "global") as FilterId;
   const region = params.get("region");
 
@@ -62,13 +66,15 @@ function ResultContent() {
     const liked = cardIds
       .map((id) => byId.get(id))
       .filter((c): c is VibeCardData => Boolean(c));
-    return computeResults(catalog, scenario, liked, {
+    const superVibed = superIds
+      .map((id) => byId.get(id))
+      .filter((c): c is VibeCardData => Boolean(c));
+    return computeResults(catalog, scenario, liked, superVibed, {
       filterId: lang,
       region,
     });
-  }, [catalog, scenario, cardIds, lang, region]);
+  }, [catalog, scenario, cardIds, superIds, lang, region]);
 
-  // Log once, async, only after the result is actually on screen.
   useEffect(() => {
     if (!revealed || !result || logged.current) return;
     logged.current = true;
@@ -78,13 +84,11 @@ function ResultContent() {
   if (!scenario || !result) {
     return (
       <div className="flex w-full flex-1 flex-col items-center justify-center gap-4 text-center">
-        <span className="text-5xl" aria-hidden>
-          🎧
-        </span>
-        <h1 className="text-2xl font-extrabold text-cream">
+        <span className="text-5xl" aria-hidden>🎧</span>
+        <h1 className="text-2xl font-extrabold text-ink">
           This link lost its vibe
         </h1>
-        <p className="max-w-xs text-sm text-cream/60">
+        <p className="max-w-xs text-sm text-gray-500">
           The result you&apos;re looking for didn&apos;t survive the trip. Make a
           fresh one — it takes 30 seconds.
         </p>

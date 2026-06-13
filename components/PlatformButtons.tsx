@@ -6,7 +6,6 @@ import type { Song } from "@/lib/types";
 
 interface PlatformButtonsProps {
   song: Song;
-  /** Passed through to click analytics, e.g. the result identity. */
   resultIdentity?: string;
   compact?: boolean;
 }
@@ -19,7 +18,6 @@ export default function PlatformButtons({
   const links = getPlatformLinks(song);
 
   const handleClick = (platform: string) => {
-    // Fire-and-forget; the anchor navigates regardless.
     logOutboundClick({
       songId: song.id,
       platform,
@@ -38,10 +36,11 @@ export default function PlatformButtons({
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => handleClick(p.id)}
-            className="flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 py-1.5 text-center text-[11px] font-black leading-tight text-cream transition-colors hover:bg-white/10"
+            className="flex min-h-[38px] min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 py-1.5 text-center text-[11px] font-black leading-tight transition-colors hover:brightness-95"
             style={{
-              borderColor: `${p.color}55`,
-              backgroundColor: `${p.color}12`,
+              borderColor: `${p.color}44`,
+              backgroundColor: `${p.color}0F`,
+              color: p.color,
             }}
             aria-label={`Listen on ${p.name}`}
           >
@@ -49,7 +48,7 @@ export default function PlatformButtons({
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: p.color }}
             />
-            <span className="min-w-0">{p.name}</span>
+            <span className="min-w-0 text-gray-700">{p.name}</span>
           </a>
         ))}
       </div>
@@ -65,15 +64,16 @@ export default function PlatformButtons({
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => handleClick(p.id)}
-          className="flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black text-cream transition-colors hover:bg-white/10"
+          className="flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black transition-colors hover:brightness-95"
           style={{
-            borderColor: `${p.color}55`,
-            backgroundColor: `${p.color}12`,
+            borderColor: `${p.color}44`,
+            backgroundColor: `${p.color}0F`,
+            color: p.color,
           }}
           aria-label={`Listen on ${p.name}`}
         >
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-          {p.name}
+          <span className="text-gray-700">{p.name}</span>
         </a>
       ))}
     </div>

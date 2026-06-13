@@ -60,23 +60,24 @@ export const TRAIT_VERDICTS: Record<Trait, string> = {
 /* ------------------------------------------------------------------ */
 
 export const GLOBAL_FILTERS: GlobalFilterOption[] = [
-  { id: "global", label: "Global" },
-  { id: "english", label: "English", languages: ["english"] },
-  { id: "spanish", label: "Spanish", languages: ["spanish"], genres: ["reggaeton"] },
-  { id: "korean", label: "Korean", languages: ["korean"], genres: ["k-pop"] },
-  { id: "japanese", label: "Japanese", languages: ["japanese"], genres: ["j-pop"] },
-  { id: "hindi", label: "Hindi", languages: ["hindi"], genres: ["bollywood"] },
-  { id: "portuguese", label: "Portuguese", languages: ["portuguese"], regions: ["brazil"] },
-  { id: "french", label: "French", languages: ["french"] },
+  { id: "global", label: "Global", flag: "🌍" },
+  { id: "english", label: "English", flag: "🇺🇸", languages: ["english"] },
+  { id: "spanish", label: "Spanish", flag: "🇪🇸", languages: ["spanish"], genres: ["reggaeton", "latin-pop"] },
+  { id: "korean", label: "Korean", flag: "🇰🇷", languages: ["korean"], genres: ["k-pop"] },
+  { id: "japanese", label: "Japanese", flag: "🇯🇵", languages: ["japanese"], genres: ["j-pop"] },
+  { id: "hindi", label: "Hindi", flag: "🇮🇳", languages: ["hindi"], genres: ["bollywood"] },
+  { id: "portuguese", label: "Portuguese", flag: "🇧🇷", languages: ["portuguese"], regions: ["brazil"] },
+  { id: "french", label: "French", flag: "🇫🇷", languages: ["french"] },
   {
     id: "afrobeats",
     label: "Afrobeats",
+    flag: "🌍",
     genres: ["afrobeats", "amapiano"],
     regions: ["nigeria", "south-africa", "ghana"],
   },
-  { id: "arabic", label: "Arabic", languages: ["arabic"], genres: ["arab-pop"] },
-  { id: "punjabi", label: "Punjabi", languages: ["punjabi"], genres: ["punjabi"] },
-  { id: "thai", label: "Thai", languages: ["thai"], genres: ["thai-pop"], regions: ["thailand"] },
+  { id: "arabic", label: "Arabic", flag: "🇸🇦", languages: ["arabic"], genres: ["arab-pop"] },
+  { id: "punjabi", label: "Punjabi", flag: "🇮🇳", languages: ["punjabi"], genres: ["punjabi"] },
+  { id: "thai", label: "Thai", flag: "🇹🇭", languages: ["thai"], genres: ["thai-pop"], regions: ["thailand"] },
 ];
 
 /* ------------------------------------------------------------------ */

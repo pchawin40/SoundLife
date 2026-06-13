@@ -19,8 +19,6 @@ export default function Home() {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [deck, setDeck] = useState<VibeCardData[]>([]);
 
-  // Cached/local catalog renders instantly; Supabase revalidates in the
-  // background and only swaps in a strictly newer version.
   useEffect(() => {
     setCatalog(loadCatalog(setCatalog));
   }, []);
@@ -31,11 +29,12 @@ export default function Home() {
     setStep("swipe");
   };
 
-  const finishSwipe = (liked: VibeCardData[]) => {
+  const finishSwipe = (liked: VibeCardData[], superVibed: VibeCardData[]) => {
     if (!scenario) return;
     const params = new URLSearchParams();
     params.set("s", scenario.id);
     if (liked.length > 0) params.set("cards", liked.map((c) => c.id).join(","));
+    if (superVibed.length > 0) params.set("super", superVibed.map((c) => c.id).join(","));
     if (filter !== "global") params.set("lang", filter);
     router.push(`/result?${params.toString()}`);
   };
@@ -60,11 +59,11 @@ export default function Home() {
               type="button"
               onClick={goBack}
               aria-label="Go back"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#17130f]/80 text-lg text-cream/80 shadow-card transition-colors hover:bg-white/10"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-lg text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
             >
               ←
             </button>
-            <span className="text-sm font-black uppercase tracking-[0.2em] text-cream/50">
+            <span className="text-sm font-black uppercase tracking-[0.2em] text-gray-500">
               SoundLife
             </span>
             <span className="w-11" aria-hidden />

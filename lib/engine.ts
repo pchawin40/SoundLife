@@ -24,13 +24,18 @@ import type {
 const SCENARIO_SONG_BONUS = 4;
 const SCENARIO_ARTIST_BONUS = 2;
 const BASE_TRAIT_WEIGHT = 1.5;
+const SUPER_VIBE_MULTIPLIER = 2.2;
 /** Deterministic nudge so equal-affinity songs rank by popularity. */
 const POPULARITY_WEIGHT = 0.01;
+/** Boost for songs whose genres/languages match liked cards. */
+const GENRE_BOOST = 3;
+/** Penalty for songs whose genres are blocked via antiGenre cards. */
+const GENRE_BLOCK_PENALTY = -12;
 const RESULT_SONG_COUNT = 10;
 
 /* ----------------------------- deck ----------------------------- */
 
-/** Build the 7-card deck for a scenario ("Random Me" draws from the full pool). */
+/** Build the 8-card deck for a scenario ("Random Me" draws from the full pool). */
 export function buildDeck(catalog: Catalog, scenario: Scenario): VibeCardData[] {
   if (scenario.deck.length === 0) {
     const pool = [...catalog.vibeCards];
@@ -38,7 +43,7 @@ export function buildDeck(catalog: Catalog, scenario: Scenario): VibeCardData[] 
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    return pool.slice(0, 7);
+    return pool.slice(0, 8);
   }
   const byId = new Map(catalog.vibeCards.map((c) => [c.id, c]));
   return scenario.deck
@@ -81,23 +86,48 @@ export function songMatchesFilter(
 
 /* ---------------------------- scoring ---------------------------- */
 
-function accumulateTraits(scenario: Scenario, liked: VibeCardData[]): Record<Trait, number> {
+function accumulateTraits(
+  scenario: Scenario,
+  liked: VibeCardData[],
+  superVibed: VibeCardData[]
+): Record<Trait, number> {
   const totals = Object.fromEntries(TRAITS.map((t) => [t, 0])) as Record<Trait, number>;
   for (const trait of TRAITS) {
     totals[trait] += (scenario.baseTraits[trait] ?? 0) * BASE_TRAIT_WEIGHT;
   }
   for (const card of liked) {
+    const mult = superVibed.some((s) => s.id === card.id) ? SUPER_VIBE_MULTIPLIER : 1;
     for (const trait of TRAITS) {
-      totals[trait] += card.traits[trait] ?? 0;
+      totals[trait] += (card.traits[trait] ?? 0) * mult;
     }
   }
-  // Empty state: "Random Me" with zero right-swipes has no signal at all.
   if (TRAITS.every((t) => totals[t] === 0)) {
     totals.energy = 1;
     totals.warmth = 1;
     totals.cinematic = 1;
   }
   return totals;
+}
+
+/** Build sets of genre/language/region preferences from typed liked cards. */
+function buildPreferences(liked: VibeCardData[]): {
+  boostedGenres: Set<string>;
+  blockedGenres: Set<string>;
+  boostedLanguages: Set<string>;
+  boostedRegions: Set<string>;
+} {
+  const boostedGenres = new Set<string>();
+  const blockedGenres = new Set<string>();
+  const boostedLanguages = new Set<string>();
+  const boostedRegions = new Set<string>();
+
+  for (const card of liked) {
+    card.boostGenres?.forEach((g) => boostedGenres.add(g));
+    card.blockGenres?.forEach((g) => blockedGenres.add(g));
+    card.boostLanguages?.forEach((l) => boostedLanguages.add(l));
+    card.boostRegions?.forEach((r) => boostedRegions.add(r));
+  }
+  return { boostedGenres, blockedGenres, boostedLanguages, boostedRegions };
 }
 
 function affinity(traits: TraitScores, normalized: Record<Trait, number>): number {
@@ -163,27 +193,36 @@ export function computeResults(
   catalog: Catalog,
   scenario: Scenario,
   liked: VibeCardData[],
+  superVibed: VibeCardData[] = [],
   options: ResultOptions = {}
 ): ResultData {
-  const totals = accumulateTraits(scenario, liked);
+  const totals = accumulateTraits(scenario, liked, superVibed);
   const max = Math.max(...TRAITS.map((t) => totals[t]), 1);
   const normalized = Object.fromEntries(
     TRAITS.map((t) => [t, totals[t] / max])
   ) as Record<Trait, number>;
 
+  const { boostedGenres, blockedGenres, boostedLanguages, boostedRegions } =
+    buildPreferences(liked);
+
   const ranked = catalog.songs
-    .map((song) => ({
-      song,
-      score:
+    .map((song) => {
+      let score =
         affinity(song.traits, normalized) +
         (song.scenarios.includes(scenario.id) ? SCENARIO_SONG_BONUS : 0) +
-        (song.popularity ?? 0) * POPULARITY_WEIGHT,
-    }))
+        (song.popularity ?? 0) * POPULARITY_WEIGHT;
+
+      // Genre boost/block from typed vibe cards
+      if (song.genres.some((g) => boostedGenres.has(g))) score += GENRE_BOOST;
+      if (song.genres.some((g) => blockedGenres.has(g))) score += GENRE_BLOCK_PENALTY;
+      if (boostedLanguages.has(song.language)) score += GENRE_BOOST;
+      if (boostedRegions.has(song.region)) score += GENRE_BOOST;
+
+      return { song, score };
+    })
     .sort((a, b) => b.score - a.score || a.song.title.localeCompare(b.song.title))
     .map((r) => r.song);
 
-  // Language/region filter narrows the tracklist but never empties it:
-  // matching songs lead, the global ranking backfills the remaining slots.
   const filter = getFilter(options.filterId);
   let songs: Song[];
   if (filter.id === "global" && !options.region) {
@@ -205,9 +244,10 @@ export function computeResults(
 
   const topTraits = traitStats.slice(0, 3).map((s) => s.trait);
   const secondShare = traitStats[1] ? traitStats[1].percent / 98 : 0.5;
+  const superBonus = superVibed.length * 3;
   const matchPercent = Math.min(
     99,
-    76 + liked.length * 2 + Math.round(6 * secondShare)
+    76 + liked.length * 2 + Math.round(6 * secondShare) + superBonus
   );
 
   return {
@@ -219,6 +259,7 @@ export function computeResults(
     playlists: pickPlaylists(scenario, topTraits[0]),
     scenarioId: scenario.id,
     likedCount: liked.length,
+    superVibeCount: superVibed.length,
     filterId: filter.id,
   };
 }

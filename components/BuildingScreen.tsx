@@ -9,9 +9,10 @@ const MESSAGES = [
   "Cross-checking the group chat…",
   "Cutting tracks that almost made it…",
   "Naming your era…",
+  "This is getting suspiciously accurate…",
 ];
 
-const BAR_COLORS = ["#26A69A", "#7E57C2", "#F0A82E", "#E091B9", "#4DB6AC"];
+const BAR_COLORS = ["#0D9488", "#7C3AED", "#D97706", "#DB2777", "#14B8A6"];
 
 export default function BuildingScreen() {
   const [messageIndex, setMessageIndex] = useState(0);
@@ -19,7 +20,7 @@ export default function BuildingScreen() {
   useEffect(() => {
     const timer = window.setInterval(
       () => setMessageIndex((i) => (i + 1) % MESSAGES.length),
-      500
+      520
     );
     return () => window.clearInterval(timer);
   }, []);
@@ -46,7 +47,7 @@ export default function BuildingScreen() {
         key={messageIndex}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-base font-semibold text-cream/70"
+        className="text-base font-semibold text-gray-500"
       >
         {MESSAGES[messageIndex]}
       </motion.p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { GLOBAL_FILTERS } from "@/lib/data";
 import type { FilterId } from "@/lib/types";
 
@@ -8,41 +9,95 @@ interface GlobalFilterProps {
   onChange: (id: FilterId) => void;
 }
 
-/**
- * "Global Mode" — biases the tracklist toward a language/scene without
- * ever emptying it (the engine backfills from the global ranking).
- */
 export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = query.trim()
+    ? GLOBAL_FILTERS.filter(
+        (f) =>
+          f.label.toLowerCase().includes(query.toLowerCase()) ||
+          f.flag?.includes(query)
+      )
+    : GLOBAL_FILTERS;
+
+  const active = GLOBAL_FILTERS.find((f) => f.id === value);
+
   return (
     <div>
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cream/40">
+      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
         Tune the world
       </p>
+
+      {/* Search input */}
+      <div className="mt-2.5 relative">
+        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+          <span className="text-gray-400 text-sm">🔍</span>
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search language, genre, or region..."
+          className="w-full rounded-2xl border border-gray-200 bg-white py-2.5 pl-8 pr-4 text-sm font-medium text-ink placeholder-gray-400 outline-none transition-colors focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => { setQuery(""); inputRef.current?.focus(); }}
+            className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 text-sm"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Filter chips */}
       <div
         className="-mx-5 mt-2.5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="radiogroup"
         aria-label="Language filter"
       >
-        {GLOBAL_FILTERS.map((filter) => {
-          const active = filter.id === value;
+        {filtered.map((filter) => {
+          const isActive = filter.id === value;
           return (
             <button
               key={filter.id}
               type="button"
               role="radio"
-              aria-checked={active}
-              onClick={() => onChange(filter.id)}
-              className={`min-h-[40px] shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-black transition-colors ${
-                active
-                  ? "border-brand-teal bg-brand-teal/20 text-cream shadow-card"
-                  : "border-white/10 bg-[#17130f] text-cream/60 hover:border-white/25 hover:text-cream"
+              aria-checked={isActive}
+              onClick={() => { onChange(filter.id); setQuery(""); }}
+              className={`min-h-[38px] shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-bold transition-all ${
+                isActive
+                  ? "border-brand-teal bg-brand-teal text-white shadow-sm"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-brand-teal/40 hover:text-brand-teal"
               }`}
             >
-              {filter.label}
+              {filter.flag} {filter.label}
             </button>
           );
         })}
+        {filtered.length === 0 && (
+          <p className="py-2 text-sm text-gray-400">No matches for "{query}"</p>
+        )}
       </div>
+
+      {/* Active filter summary */}
+      {active && active.id !== "global" && (
+        <div className="mt-2.5 flex items-center gap-2">
+          <span className="text-xs font-semibold text-brand-teal">
+            ✓ Boosting {active.flag} {active.label} songs — blends globally so results never empty
+          </span>
+          <button
+            type="button"
+            onClick={() => onChange("global")}
+            className="text-xs font-bold text-gray-400 hover:text-gray-600 underline"
+          >
+            Clear
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -22,13 +22,21 @@ export type ScenarioId =
   | "chill"
   | "random";
 
+export type CardType =
+  | "lifestyle"
+  | "sound"
+  | "genre"
+  | "antiGenre"
+  | "mood"
+  | "language"
+  | "region";
+
 export interface Scenario {
   id: ScenarioId;
   emoji: string;
   label: string;
   tagline: string;
   baseTraits: TraitScores;
-  /** Vibe card ids shown for this scenario. Empty for "random" (drawn at runtime). */
   deck: string[];
 }
 
@@ -40,6 +48,19 @@ export interface VibeCardData {
   traits: TraitScores;
   /** Tiny toast shown after a right swipe, e.g. "+ Dark" */
   feedback: string;
+  cardType?: CardType;
+  /** CSS gradient for the card's visual area */
+  gradient?: string;
+  /** Genres to boost in results when right-swiped (genre cards) */
+  boostGenres?: string[];
+  /** Genres to filter out when right-swiped (antiGenre cards) */
+  blockGenres?: string[];
+  /** Languages to prefer in results when right-swiped */
+  boostLanguages?: string[];
+  /** Regions to prefer in results when right-swiped */
+  boostRegions?: string[];
+  /** Short explanation shown on flip: "why this matters" */
+  whyText?: string;
 }
 
 export interface ReasonChip {
@@ -63,7 +84,10 @@ export interface Song {
   language: string;
   /** Lowercase slug, e.g. "north-america", "nigeria", "south-asia". */
   region: string;
+  /** ISO country code or readable name, e.g. "us", "kr", "nigeria". */
+  country?: string;
   genres: string[];
+  moods?: string[];
   era?: string | null;
   platforms: SongPlatforms;
   traits: TraitScores;
@@ -71,6 +95,10 @@ export interface Song {
   chips: ReasonChip[];
   /** 0–100 nudge used as a deterministic tiebreaker, never a hard rank. */
   popularity?: number;
+  explicit?: boolean;
+  energy_level?: number;
+  tempo_level?: number;
+  lyric_density?: number;
 }
 
 export interface ArtistProfile {
@@ -104,6 +132,7 @@ export type FilterId =
 export interface GlobalFilterOption {
   id: FilterId;
   label: string;
+  flag?: string;
   /** A song matches if its language, any genre, or region hits one of these. */
   languages?: string[];
   genres?: string[];
@@ -124,6 +153,7 @@ export interface ResultData {
   playlists: string[];
   scenarioId: ScenarioId;
   likedCount: number;
+  superVibeCount: number;
   filterId: FilterId;
 }
 

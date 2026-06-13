@@ -129,14 +129,14 @@ async function fetchRemoteCatalog(version: number): Promise<Catalog | null> {
     supabase
       .from("songs")
       .select(
-        "id,title,artist,language,region,genres,era,spotify_url,apple_music_url,youtube_music_url,youtube_video_id,traits,scenarios,chips,popularity_score"
+        "id,title,artist,language,region,country,genres,moods,era,spotify_url,apple_music_url,youtube_music_url,youtube_video_id,traits,scenarios,chips,popularity_score,explicit,energy_level,tempo_level,lyric_density"
       )
       .eq("is_active", true)
       .order("popularity_score", { ascending: false })
       .limit(MAX_ROWS),
     supabase
       .from("vibe_cards")
-      .select("id,emoji,title,subtitle,traits,feedback")
+      .select("id,emoji,title,subtitle,traits,feedback,card_type,gradient,boost_genres,block_genres,boost_languages,boost_regions,why_text")
       .eq("is_active", true)
       .limit(MAX_ROWS),
     supabase
@@ -187,7 +187,9 @@ function mapSongRow(row: any): Song | null {
     artist: String(row.artist),
     language: String(row.language ?? "english").toLowerCase(),
     region: String(row.region ?? "global").toLowerCase(),
+    country: row.country ? String(row.country) : undefined,
     genres: toStringArray(row.genres),
+    moods: row.moods ? toStringArray(row.moods) : undefined,
     era: row.era ? String(row.era) : null,
     platforms: {
       spotifyUrl: row.spotify_url ?? null,
@@ -199,6 +201,10 @@ function mapSongRow(row: any): Song | null {
     scenarios: toStringArray(row.scenarios) as ScenarioId[],
     chips: toChips(row.chips),
     popularity: Number(row.popularity_score ?? 0),
+    explicit: row.explicit ?? false,
+    energy_level: row.energy_level ? Number(row.energy_level) : undefined,
+    tempo_level: row.tempo_level ? Number(row.tempo_level) : undefined,
+    lyric_density: row.lyric_density ? Number(row.lyric_density) : undefined,
   };
 }
 
@@ -211,6 +217,13 @@ function mapVibeCardRow(row: any): VibeCardData | null {
     subtitle: String(row.subtitle ?? ""),
     traits: (row.traits ?? {}) as TraitScores,
     feedback: String(row.feedback ?? "+ Vibe"),
+    cardType: row.card_type ?? undefined,
+    gradient: row.gradient ?? undefined,
+    boostGenres: row.boost_genres ? toStringArray(row.boost_genres) : undefined,
+    blockGenres: row.block_genres ? toStringArray(row.block_genres) : undefined,
+    boostLanguages: row.boost_languages ? toStringArray(row.boost_languages) : undefined,
+    boostRegions: row.boost_regions ? toStringArray(row.boost_regions) : undefined,
+    whyText: row.why_text ?? undefined,
   };
 }
 
