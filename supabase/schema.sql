@@ -21,6 +21,9 @@ create table if not exists public.songs (
   apple_music_url text,
   youtube_music_url text,
   youtube_video_id text,
+  preview_url text,
+  artwork_url text,
+  itunes_track_id text,
   traits jsonb not null default '{}',
   scenarios text[] not null default '{}',
   chips jsonb not null default '[]',
@@ -96,6 +99,13 @@ create table if not exists public.outbound_click_events (
 
 create unique index if not exists songs_title_artist_key
   on public.songs ((lower(title)), (lower(artist)));
+
+do $$
+begin
+  alter table public.songs add column if not exists preview_url text;
+  alter table public.songs add column if not exists artwork_url text;
+  alter table public.songs add column if not exists itunes_track_id text;
+end $$;
 
 create index if not exists songs_language_idx on public.songs (language);
 create index if not exists songs_region_idx on public.songs (region);

@@ -1,0 +1,23 @@
+name: Refresh SoundLife Catalog
+
+on:
+  schedule:
+    - cron: "17 10 * * 1,4"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      ENABLE_CATALOG_REFRESH: ${{ secrets.ENABLE_CATALOG_REFRESH }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Refresh catalog from iTunes
+        run: npm exec tsx scripts/refresh-catalog.ts

@@ -129,7 +129,7 @@ async function fetchRemoteCatalog(version: number): Promise<Catalog | null> {
     supabase
       .from("songs")
       .select(
-        "id,title,artist,language,region,country,genres,moods,era,spotify_url,apple_music_url,youtube_music_url,youtube_video_id,traits,scenarios,chips,popularity_score,explicit,energy_level,tempo_level,lyric_density"
+        "id,title,artist,language,region,country,genres,moods,era,spotify_url,apple_music_url,youtube_music_url,youtube_video_id,preview_url,artwork_url,itunes_track_id,traits,scenarios,chips,popularity_score,explicit,energy_level,tempo_level,lyric_density"
       )
       .eq("is_active", true)
       .order("popularity_score", { ascending: false })
@@ -177,7 +177,6 @@ export function mergeCatalogs(base: Catalog, remote: Catalog): Catalog {
 }
 
 /* ---------------------------- row mapping ---------------------------- */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 function mapSongRow(row: any): Song | null {
   if (!row?.title || !row?.artist) return null;
@@ -197,6 +196,9 @@ function mapSongRow(row: any): Song | null {
       youtubeMusicUrl: row.youtube_music_url ?? null,
       youtubeVideoId: row.youtube_video_id ?? null,
     },
+    previewUrl: row.preview_url ?? null,
+    artworkUrl: row.artwork_url ?? null,
+    itunesTrackId: row.itunes_track_id ? String(row.itunes_track_id) : null,
     traits: (row.traits ?? {}) as TraitScores,
     scenarios: toStringArray(row.scenarios) as ScenarioId[],
     chips: toChips(row.chips),
