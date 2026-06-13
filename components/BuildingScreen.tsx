@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 
 const MESSAGES = [
   "Reading your swipes…",
-  "Matching tempo…",
-  "Scanning moods…",
-  "Cutting the tracklist…",
+  "Judging you. Gently.",
+  "Cross-checking the group chat…",
+  "Cutting tracks that almost made it…",
+  "Naming your era…",
 ];
 
 const BAR_COLORS = ["#26A69A", "#7E57C2", "#F0A82E", "#E091B9", "#4DB6AC"];

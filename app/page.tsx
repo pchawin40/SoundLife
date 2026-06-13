@@ -1,51 +1,52 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import BuildingScreen from "@/components/BuildingScreen";
 import LandingPage from "@/components/LandingPage";
-import ResultsScreen from "@/components/ResultsScreen";
 import ScenarioPicker from "@/components/ScenarioPicker";
 import SwipeDeck from "@/components/SwipeDeck";
-import { buildDeck, computeResults } from "@/lib/engine";
-import type { ResultData, Scenario, Step, VibeCardData } from "@/lib/types";
-
-const BUILDING_DELAY_MS = 1600;
+import { FALLBACK_CATALOG } from "@/lib/catalog.fallback";
+import { loadCatalog } from "@/lib/catalog";
+import { buildDeck } from "@/lib/engine";
+import type { Catalog, FilterId, Scenario, Step, VibeCardData } from "@/lib/types";
 
 export default function Home() {
+  const router = useRouter();
+  const [catalog, setCatalog] = useState<Catalog>(FALLBACK_CATALOG);
   const [step, setStep] = useState<Step>("landing");
+  const [filter, setFilter] = useState<FilterId>("global");
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [deck, setDeck] = useState<VibeCardData[]>([]);
-  const [result, setResult] = useState<ResultData | null>(null);
-  const buildTimer = useRef<number | null>(null);
+
+  // Cached/local catalog renders instantly; Supabase revalidates in the
+  // background and only swaps in a strictly newer version.
+  useEffect(() => {
+    setCatalog(loadCatalog(setCatalog));
+  }, []);
 
   const pickScenario = (next: Scenario) => {
     setScenario(next);
-    setDeck(buildDeck(next));
+    setDeck(buildDeck(catalog, next));
     setStep("swipe");
   };
 
   const finishSwipe = (liked: VibeCardData[]) => {
     if (!scenario) return;
-    setResult(computeResults(scenario, liked));
-    setStep("building");
-    if (buildTimer.current) window.clearTimeout(buildTimer.current);
-    buildTimer.current = window.setTimeout(
-      () => setStep("results"),
-      BUILDING_DELAY_MS
-    );
-  };
-
-  const redo = () => {
-    setScenario(null);
-    setDeck([]);
-    setResult(null);
-    setStep("scenario");
+    const params = new URLSearchParams();
+    params.set("s", scenario.id);
+    if (liked.length > 0) params.set("cards", liked.map((c) => c.id).join(","));
+    if (filter !== "global") params.set("lang", filter);
+    router.push(`/result?${params.toString()}`);
   };
 
   const goBack = () => {
     if (step === "scenario") setStep("landing");
-    if (step === "swipe") redo();
+    if (step === "swipe") {
+      setScenario(null);
+      setDeck([]);
+      setStep("scenario");
+    }
   };
 
   const showTopBar = step === "scenario" || step === "swipe";
@@ -89,17 +90,20 @@ export default function Home() {
             {step === "landing" && (
               <LandingPage onStart={() => setStep("scenario")} />
             )}
-            {step === "scenario" && <ScenarioPicker onSelect={pickScenario} />}
+            {step === "scenario" && (
+              <ScenarioPicker
+                scenarios={catalog.scenarios}
+                filter={filter}
+                onFilterChange={setFilter}
+                onSelect={pickScenario}
+              />
+            )}
             {step === "swipe" && scenario && deck.length > 0 && (
               <SwipeDeck
                 scenario={scenario}
                 deck={deck}
                 onComplete={finishSwipe}
               />
-            )}
-            {step === "building" && <BuildingScreen />}
-            {step === "results" && result && (
-              <ResultsScreen result={result} onRedo={redo} />
             )}
           </motion.div>
         </AnimatePresence>

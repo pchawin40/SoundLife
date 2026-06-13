@@ -47,18 +47,67 @@ export interface ReasonChip {
   label: string;
 }
 
+export interface SongPlatforms {
+  spotifyUrl?: string | null;
+  appleMusicUrl?: string | null;
+  youtubeMusicUrl?: string | null;
+  youtubeVideoId?: string | null;
+}
+
 export interface Song {
+  /** Slug for local songs, uuid for Supabase rows. */
+  id: string;
   title: string;
   artist: string;
+  /** Lowercase, e.g. "english", "korean", "instrumental". */
+  language: string;
+  /** Lowercase slug, e.g. "north-america", "nigeria", "south-asia". */
+  region: string;
+  genres: string[];
+  era?: string | null;
+  platforms: SongPlatforms;
   traits: TraitScores;
   scenarios: ScenarioId[];
   chips: ReasonChip[];
+  /** 0–100 nudge used as a deterministic tiebreaker, never a hard rank. */
+  popularity?: number;
 }
 
 export interface ArtistProfile {
   name: string;
   traits: TraitScores;
   scenarios: ScenarioId[];
+}
+
+/** The full dataset the engine runs on — local fallback, cached, or Supabase. */
+export interface Catalog {
+  version: number;
+  songs: Song[];
+  vibeCards: VibeCardData[];
+  scenarios: Scenario[];
+}
+
+export type FilterId =
+  | "global"
+  | "english"
+  | "spanish"
+  | "korean"
+  | "japanese"
+  | "hindi"
+  | "portuguese"
+  | "french"
+  | "afrobeats"
+  | "arabic"
+  | "punjabi"
+  | "thai";
+
+export interface GlobalFilterOption {
+  id: FilterId;
+  label: string;
+  /** A song matches if its language, any genre, or region hits one of these. */
+  languages?: string[];
+  genres?: string[];
+  regions?: string[];
 }
 
 export interface TraitStat {
@@ -75,6 +124,7 @@ export interface ResultData {
   playlists: string[];
   scenarioId: ScenarioId;
   likedCount: number;
+  filterId: FilterId;
 }
 
-export type Step = "landing" | "scenario" | "swipe" | "building" | "results";
+export type Step = "landing" | "scenario" | "swipe";

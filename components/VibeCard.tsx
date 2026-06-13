@@ -13,6 +13,9 @@ interface VibeCardProps {
 const SWIPE_OFFSET = 90;
 const SWIPE_VELOCITY = 600;
 
+/** Cards behind the top one fan out with a slight alternating tilt. */
+const STACK_TILT = [0, 2.2, -2];
+
 const cardVariants = {
   enter: { scale: 0.9, y: 30, opacity: 0 },
   stack: (pos: number) => ({
@@ -57,8 +60,14 @@ export default function VibeCard({ card, stackPosition, onSwipe }: VibeCardProps
         }
       }}
     >
-      <div className="flex h-full w-full flex-col items-center justify-center gap-5 rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.09] to-white/[0.03] px-8 text-center shadow-card backdrop-blur-sm">
-        <span className="text-7xl" aria-hidden>
+      <div
+        className="flex h-full w-full flex-col items-center justify-center gap-5 rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.09] to-white/[0.03] px-8 text-center shadow-card backdrop-blur-sm transition-transform duration-300"
+        style={{ transform: `rotate(${STACK_TILT[stackPosition] ?? 0}deg)` }}
+      >
+        <span
+          className="flex h-28 w-28 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.06] text-6xl"
+          aria-hidden
+        >
           {card.emoji}
         </span>
         <div>

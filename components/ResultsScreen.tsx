@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import ShareCard from "./ShareCard";
+import ShareResultCard from "./ShareResultCard";
 import SongCard from "./SongCard";
 import TraitBar from "./TraitBar";
-import { SCENARIOS } from "@/lib/data";
+import { TRAIT_VERDICTS } from "@/lib/data";
+import { getFilter } from "@/lib/engine";
 import { buildShareText, copyToClipboard } from "@/lib/share";
-import type { ResultData } from "@/lib/types";
+import type { Catalog, ResultData } from "@/lib/types";
 
 interface ResultsScreenProps {
   result: ResultData;
+  catalog: Catalog;
   onRedo: () => void;
 }
 
@@ -22,9 +24,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ResultsScreen({ result, onRedo }: ResultsScreenProps) {
+export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreenProps) {
   const [toast, setToast] = useState<string | null>(null);
-  const scenario = SCENARIOS.find((s) => s.id === result.scenarioId);
+  const scenario = catalog.scenarios.find((s) => s.id === result.scenarioId);
+  const filter = getFilter(result.filterId);
+  const verdict = TRAIT_VERDICTS[result.traits[0].trait];
 
   useEffect(() => {
     if (!toast) return;
@@ -50,11 +54,25 @@ export default function ResultsScreen({ result, onRedo }: ResultsScreenProps) {
         className="text-center text-xs font-black uppercase tracking-[0.22em] text-cream/45"
       >
         Your SoundLife · {scenario?.emoji} {scenario?.label}
+        {filter.id !== "global" && ` · ${filter.label} heat`}
       </motion.p>
 
       <div className="mt-4">
-        <ShareCard result={result} />
+        <ShareResultCard
+          result={result}
+          scenarioEmoji={scenario?.emoji ?? "🎧"}
+          onToast={setToast}
+        />
       </div>
+
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
+        className="mt-5 text-center text-base font-semibold italic text-cream/70"
+      >
+        “{verdict}”
+      </motion.p>
 
       {result.likedCount === 0 && (
         <p className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm text-cream/60">
@@ -94,20 +112,20 @@ export default function ResultsScreen({ result, onRedo }: ResultsScreenProps) {
       {/* Songs */}
       <section className="mt-10">
         <div className="flex items-baseline justify-between">
-          <SectionTitle>Your top 10 tracks</SectionTitle>
+          <SectionTitle>The tracklist</SectionTitle>
           <span className="text-xs text-cream/40">tap a platform to listen</span>
         </div>
         {result.songs.length > 0 ? (
           <div className="mt-4 space-y-3">
             {result.songs.map((song, i) => (
               <motion.div
-                key={`${song.title}-${song.artist}`}
+                key={song.id}
                 initial={{ opacity: 0, y: 14 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.35, delay: Math.min(i * 0.04, 0.2) }}
               >
-                <SongCard song={song} rank={i + 1} />
+                <SongCard song={song} rank={i + 1} resultIdentity={result.identity} />
               </motion.div>
             ))}
           </div>
@@ -121,7 +139,7 @@ export default function ResultsScreen({ result, onRedo }: ResultsScreenProps) {
 
       {/* Artists */}
       <section className="mt-10">
-        <SectionTitle>Artists for you</SectionTitle>
+        <SectionTitle>Artists to fall into</SectionTitle>
         <div className="mt-4 flex flex-wrap gap-2">
           {result.artists.map((artist) => (
             <span
@@ -137,7 +155,7 @@ export default function ResultsScreen({ result, onRedo }: ResultsScreenProps) {
       {/* Playlist names */}
       <section className="mt-10">
         <div className="flex items-baseline justify-between">
-          <SectionTitle>Playlist name ideas</SectionTitle>
+          <SectionTitle>Name your playlist</SectionTitle>
           <span className="text-xs text-cream/40">tap to copy</span>
         </div>
         <div className="mt-4 space-y-2.5">

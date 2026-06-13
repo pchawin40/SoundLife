@@ -1,15 +1,17 @@
 import {
   ARTIST_POOL,
+  GLOBAL_FILTERS,
   IDENTITY_RULES,
   SCENARIO_IDENTITY_NOUN,
   SCENARIO_PLAYLISTS,
-  SONGS,
   TRAITS,
   TRAIT_META,
   TRAIT_PLAYLISTS,
-  VIBE_CARDS,
 } from "./data";
 import type {
+  Catalog,
+  FilterId,
+  GlobalFilterOption,
   ResultData,
   Scenario,
   Song,
@@ -22,18 +24,23 @@ import type {
 const SCENARIO_SONG_BONUS = 4;
 const SCENARIO_ARTIST_BONUS = 2;
 const BASE_TRAIT_WEIGHT = 1.5;
+/** Deterministic nudge so equal-affinity songs rank by popularity. */
+const POPULARITY_WEIGHT = 0.01;
+const RESULT_SONG_COUNT = 10;
+
+/* ----------------------------- deck ----------------------------- */
 
 /** Build the 7-card deck for a scenario ("Random Me" draws from the full pool). */
-export function buildDeck(scenario: Scenario): VibeCardData[] {
-  if (scenario.id === "random") {
-    const pool = [...VIBE_CARDS];
+export function buildDeck(catalog: Catalog, scenario: Scenario): VibeCardData[] {
+  if (scenario.deck.length === 0) {
+    const pool = [...catalog.vibeCards];
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     return pool.slice(0, 7);
   }
-  const byId = new Map(VIBE_CARDS.map((c) => [c.id, c]));
+  const byId = new Map(catalog.vibeCards.map((c) => [c.id, c]));
   return scenario.deck
     .map((id) => byId.get(id))
     .filter((c): c is VibeCardData => Boolean(c));
@@ -52,6 +59,27 @@ export function dominantTrait(traits: TraitScores): Trait {
   }
   return best;
 }
+
+/* ---------------------------- filters ---------------------------- */
+
+export function getFilter(id: FilterId | string | null | undefined): GlobalFilterOption {
+  return GLOBAL_FILTERS.find((f) => f.id === id) ?? GLOBAL_FILTERS[0];
+}
+
+export function songMatchesFilter(
+  song: Song,
+  filter: GlobalFilterOption,
+  region?: string | null
+): boolean {
+  if (region && song.region !== region.toLowerCase()) return false;
+  if (filter.id === "global") return true;
+  if (filter.languages?.includes(song.language)) return true;
+  if (filter.genres?.some((g) => song.genres.includes(g))) return true;
+  if (filter.regions?.includes(song.region)) return true;
+  return false;
+}
+
+/* ---------------------------- scoring ---------------------------- */
 
 function accumulateTraits(scenario: Scenario, liked: VibeCardData[]): Record<Trait, number> {
   const totals = Object.fromEntries(TRAITS.map((t) => [t, 0])) as Record<Trait, number>;
@@ -93,7 +121,8 @@ function pickIdentity(scenario: Scenario, topTraits: Trait[]): string {
   if (second && TRAIT_META[second].adjective !== adjectives[0]) {
     adjectives.push(TRAIT_META[second].adjective);
   }
-  return `${adjectives.join(" ")} ${SCENARIO_IDENTITY_NOUN[scenario.id]}`;
+  const noun = SCENARIO_IDENTITY_NOUN[scenario.id] ?? SCENARIO_IDENTITY_NOUN.random;
+  return `${adjectives.join(" ")} ${noun}`;
 }
 
 function pickArtists(topSongs: Song[], normalized: Record<Trait, number>, scenario: Scenario): string[] {
@@ -119,27 +148,51 @@ function pickArtists(topSongs: Song[], normalized: Record<Trait, number>, scenar
 }
 
 function pickPlaylists(scenario: Scenario, topTrait: Trait): string[] {
-  const [a, b] = SCENARIO_PLAYLISTS[scenario.id];
+  const [a, b] = SCENARIO_PLAYLISTS[scenario.id] ?? SCENARIO_PLAYLISTS.random;
   return [...new Set([a, b, TRAIT_PLAYLISTS[topTrait]])].slice(0, 3);
 }
 
-export function computeResults(scenario: Scenario, liked: VibeCardData[]): ResultData {
+/* ---------------------------- results ---------------------------- */
+
+export interface ResultOptions {
+  filterId?: FilterId;
+  region?: string | null;
+}
+
+export function computeResults(
+  catalog: Catalog,
+  scenario: Scenario,
+  liked: VibeCardData[],
+  options: ResultOptions = {}
+): ResultData {
   const totals = accumulateTraits(scenario, liked);
   const max = Math.max(...TRAITS.map((t) => totals[t]), 1);
   const normalized = Object.fromEntries(
     TRAITS.map((t) => [t, totals[t] / max])
   ) as Record<Trait, number>;
 
-  const ranked = SONGS
+  const ranked = catalog.songs
     .map((song) => ({
       song,
       score:
         affinity(song.traits, normalized) +
-        (song.scenarios.includes(scenario.id) ? SCENARIO_SONG_BONUS : 0),
+        (song.scenarios.includes(scenario.id) ? SCENARIO_SONG_BONUS : 0) +
+        (song.popularity ?? 0) * POPULARITY_WEIGHT,
     }))
-    .sort((a, b) => b.score - a.score || a.song.title.localeCompare(b.song.title));
+    .sort((a, b) => b.score - a.score || a.song.title.localeCompare(b.song.title))
+    .map((r) => r.song);
 
-  const songs = ranked.slice(0, 10).map((r) => r.song);
+  // Language/region filter narrows the tracklist but never empties it:
+  // matching songs lead, the global ranking backfills the remaining slots.
+  const filter = getFilter(options.filterId);
+  let songs: Song[];
+  if (filter.id === "global" && !options.region) {
+    songs = ranked.slice(0, RESULT_SONG_COUNT);
+  } else {
+    const matched = ranked.filter((s) => songMatchesFilter(s, filter, options.region));
+    const rest = ranked.filter((s) => !songMatchesFilter(s, filter, options.region));
+    songs = [...matched, ...rest].slice(0, RESULT_SONG_COUNT);
+  }
 
   const traitStats: TraitStat[] = TRAITS
     .map((trait) => ({ trait, value: totals[trait] }))
@@ -166,5 +219,6 @@ export function computeResults(scenario: Scenario, liked: VibeCardData[]): Resul
     playlists: pickPlaylists(scenario, topTraits[0]),
     scenarioId: scenario.id,
     likedCount: liked.length,
+    filterId: filter.id,
   };
 }

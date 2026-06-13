@@ -1,14 +1,22 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { SCENARIOS } from "@/lib/data";
-import type { Scenario } from "@/lib/types";
+import GlobalFilter from "./GlobalFilter";
+import type { FilterId, Scenario } from "@/lib/types";
 
 interface ScenarioPickerProps {
+  scenarios: Scenario[];
+  filter: FilterId;
+  onFilterChange: (id: FilterId) => void;
   onSelect: (scenario: Scenario) => void;
 }
 
-export default function ScenarioPicker({ onSelect }: ScenarioPickerProps) {
+export default function ScenarioPicker({
+  scenarios,
+  filter,
+  onFilterChange,
+  onSelect,
+}: ScenarioPickerProps) {
   return (
     <div className="flex w-full flex-1 flex-col">
       <motion.div
@@ -25,7 +33,7 @@ export default function ScenarioPicker({ onSelect }: ScenarioPickerProps) {
       </motion.div>
 
       <div className="mt-8 grid grid-cols-2 gap-3">
-        {SCENARIOS.map((scenario, i) => (
+        {scenarios.map((scenario, i) => (
           <motion.button
             key={scenario.id}
             type="button"
@@ -52,6 +60,18 @@ export default function ScenarioPicker({ onSelect }: ScenarioPickerProps) {
           </motion.button>
         ))}
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.3 }}
+        className="mt-8"
+      >
+        <GlobalFilter value={filter} onChange={onFilterChange} />
+        <p className="mt-2 text-xs text-cream/40">
+          Optional — leans your tracklist toward a language or scene.
+        </p>
+      </motion.div>
     </div>
   );
 }
