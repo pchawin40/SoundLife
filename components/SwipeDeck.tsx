@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import VibeCard from "./VibeCard";
+import { pausePreview } from "@/lib/audio";
 import { TRAIT_META } from "@/lib/data";
 import { dominantTrait } from "@/lib/engine";
+import { getHapticsEnabled, setHapticsEnabled, vibrate } from "@/lib/haptics";
 import type { Scenario, VibeCardData } from "@/lib/types";
 
 interface SwipeDeckProps {
@@ -71,6 +73,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
   const [lastDirection, setLastDirection] = useState<1 | -1>(1);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [partyMode, setPartyMode] = useState(false);
+  const [hapticsOn, setHapticsOn] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const finishTimer = useRef<number | null>(null);
   const transitionLock = useRef(false);
@@ -98,6 +101,8 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
       const isLike = direction === 1 || direction === 2;
       const isSuper = direction === 2;
       const isNope = direction === -1;
+      pausePreview();
+      vibrate(isSuper ? [14, 34, 14] : isNope ? 8 : 12);
 
       const nextLiked = isLike ? [...liked, card] : liked;
       const nextSuperVibed = isSuper ? [...superVibed, card] : superVibed;
@@ -164,7 +169,11 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
   }, [clearFinishTimer, history]);
 
   useEffect(() => {
-    return () => clearFinishTimer();
+    setHapticsOn(getHapticsEnabled());
+    return () => {
+      clearFinishTimer();
+      pausePreview();
+    };
   }, [clearFinishTimer]);
 
   useEffect(() => {
@@ -271,18 +280,36 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
 
         {/* Mode toggle */}
         <div className="mt-6 max-w-md">
-          <button
-            type="button"
-            onClick={() => setPartyMode((v) => !v)}
-            aria-pressed={partyMode}
-            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black transition-colors ${
-              partyMode
-                ? "border-purple-200 bg-purple-50 text-purple-600"
-                : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
-            }`}
-          >
-            {partyMode ? "Party Mode ON" : "Clean Mode"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setPartyMode((v) => !v)}
+              aria-pressed={partyMode}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black transition-colors ${
+                partyMode
+                  ? "border-purple-200 bg-purple-50 text-purple-600"
+                  : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
+              }`}
+            >
+              {partyMode ? "Party Mode ON" : "Clean Mode"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !hapticsOn;
+                setHapticsOn(next);
+                setHapticsEnabled(next);
+              }}
+              aria-pressed={hapticsOn}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black transition-colors ${
+                hapticsOn
+                  ? "border-orange-200 bg-orange-50 text-orange-600"
+                  : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
+              }`}
+            >
+              Haptics {hapticsOn ? "ON" : "OFF"}
+            </button>
+          </div>
         </div>
       </motion.aside>
 
