@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "generate:og": "tsx scripts/generate-og.ts",
+    "generate:card-images": "tsx scripts/generate-card-images.ts",
     "prebuild": "npm run generate:og",
     "build": "next build",
     "typecheck": "tsc --noEmit",
@@ -28,6 +29,7 @@
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.18",
     "postcss": "^8.4.49",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.15",
     "tsx": "^4.22.4",
     "typescript": "^5.6.3",
