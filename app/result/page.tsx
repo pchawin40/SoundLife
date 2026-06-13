@@ -20,12 +20,8 @@ const BUILDING_DELAY_MS = 1600;
  */
 export default function ResultPage() {
   return (
-    <main className="relative min-h-dvh overflow-x-hidden">
-      <div className="pointer-events-none fixed inset-0" aria-hidden>
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-violet/20 blur-3xl" />
-        <div className="absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-brand-teal/15 blur-3xl" />
-      </div>
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-6 sm:max-w-lg">
+    <main className="app-surface relative min-h-dvh overflow-x-hidden">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 py-6 sm:px-7 lg:px-8">
         <Suspense fallback={<BuildingScreen />}>
           <ResultContent />
         </Suspense>

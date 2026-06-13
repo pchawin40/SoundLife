@@ -16,7 +16,7 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
   return (
     <div>
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cream/40">
-        🌍 Tune the world
+        Tune the world
       </p>
       <div
         className="-mx-5 mt-2.5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -32,10 +32,10 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
               role="radio"
               aria-checked={active}
               onClick={() => onChange(filter.id)}
-              className={`min-h-[38px] shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-colors ${
+              className={`min-h-[40px] shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-black transition-colors ${
                 active
-                  ? "border-brand-teal bg-brand-teal/20 text-cream"
-                  : "border-white/10 bg-white/5 text-cream/60 hover:border-white/25 hover:text-cream"
+                  ? "border-brand-teal bg-brand-teal/20 text-cream shadow-card"
+                  : "border-white/10 bg-[#17130f] text-cream/60 hover:border-white/25 hover:text-cream"
               }`}
             >
               {filter.label}

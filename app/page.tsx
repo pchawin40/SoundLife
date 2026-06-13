@@ -52,22 +52,15 @@ export default function Home() {
   const showTopBar = step === "scenario" || step === "swipe";
 
   return (
-    <main className="relative min-h-dvh overflow-x-hidden">
-      {/* Ambient background glows */}
-      <div className="pointer-events-none fixed inset-0" aria-hidden>
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-violet/20 blur-3xl" />
-        <div className="absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-brand-teal/15 blur-3xl" />
-        <div className="absolute right-0 top-1/3 h-64 w-64 rounded-full bg-brand-amber/10 blur-3xl" />
-      </div>
-
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-6 sm:max-w-lg">
+    <main className="app-surface relative min-h-dvh overflow-x-hidden">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-5 py-5 sm:px-7 lg:px-8">
         {showTopBar && (
-          <header className="mb-6 flex items-center justify-between">
+          <header className="mx-auto mb-6 flex w-full max-w-5xl items-center justify-between">
             <button
               type="button"
               onClick={goBack}
               aria-label="Go back"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg text-cream/80 transition-colors hover:bg-white/10"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#17130f]/80 text-lg text-cream/80 shadow-card transition-colors hover:bg-white/10"
             >
               ←
             </button>

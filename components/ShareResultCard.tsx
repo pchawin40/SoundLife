@@ -61,9 +61,9 @@ export default function ShareResultCard({
         initial={{ opacity: 0, scale: 0.94, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative mx-auto flex aspect-square w-full max-w-sm flex-col overflow-hidden rounded-[28px] border border-white/15 p-6 shadow-card"
+        className="relative mx-auto flex aspect-square w-full max-w-[410px] flex-col overflow-hidden rounded-[30px] border border-white/15 p-6 shadow-card"
         style={{
-          background: `radial-gradient(120% 90% at 12% 8%, ${primary.color}38 0%, transparent 55%), radial-gradient(110% 90% at 92% 96%, ${secondary.color}2E 0%, transparent 55%), #13100D`,
+          background: `linear-gradient(145deg, ${primary.color}24 0%, rgba(19,16,13,0.92) 38%, ${secondary.color}1F 100%), #13100D`,
         }}
       >
         <div className="flex items-center justify-between">
@@ -91,7 +91,7 @@ export default function ShareResultCard({
           {result.traits.slice(0, 3).map((stat) => {
             const meta = TRAIT_META[stat.trait];
             return (
-              <div key={stat.trait} className="flex items-center gap-2 text-xs font-semibold text-cream/85">
+              <div key={stat.trait} className="flex items-center gap-2 text-xs font-semibold text-cream/80">
                 <span className="w-5 text-center" aria-hidden>{meta.emoji}</span>
                 <span className="w-20">{meta.label}</span>
                 <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
@@ -113,14 +113,14 @@ export default function ShareResultCard({
             {result.songs.slice(0, 3).map((song) => (
               <li
                 key={`${song.title}-${song.artist}`}
-                className="truncate text-[13px] text-cream/85"
+                className="truncate text-[13px] text-cream/80"
               >
                 <span className="font-bold">{song.title}</span>
                 <span className="text-cream/50"> — {song.artist}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-2.5 text-[10px] font-medium text-cream/35">
+          <p className="mt-2.5 text-[10px] font-medium text-cream/40">
             swipe your vibe ✦ soundlife
           </p>
         </div>
@@ -130,7 +130,7 @@ export default function ShareResultCard({
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="mx-auto mt-3 flex min-h-[44px] w-full max-w-sm items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 text-sm font-bold text-cream transition-colors hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
+        className="mx-auto mt-3 flex min-h-[46px] w-full max-w-[410px] items-center justify-center gap-2 rounded-full border border-white/15 bg-[#17130f] px-4 text-sm font-black text-cream transition-colors hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
       >
         {saving ? "Rendering…" : "⬇ Save / share this card"}
       </button>

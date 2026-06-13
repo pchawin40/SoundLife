@@ -30,7 +30,7 @@ export default function PlatformButtons({
 
   if (compact) {
     return (
-      <div className="flex flex-wrap gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
         {links.map((p) => (
           <a
             key={p.id}
@@ -38,13 +38,18 @@ export default function PlatformButtons({
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => handleClick(p.id)}
-            className="flex min-h-[32px] items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-cream/70 transition-colors hover:border-white/25 hover:text-cream"
+            className="flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 py-1.5 text-center text-[11px] font-black leading-tight text-cream transition-colors hover:bg-white/10"
+            style={{
+              borderColor: `${p.color}55`,
+              backgroundColor: `${p.color}12`,
+            }}
+            aria-label={`Listen on ${p.name}`}
           >
             <span
-              className="h-1.5 w-1.5 rounded-full"
+              className="h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: p.color }}
             />
-            {p.shortName}
+            <span className="min-w-0">{p.name}</span>
           </a>
         ))}
       </div>
@@ -52,7 +57,7 @@ export default function PlatformButtons({
   }
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="grid gap-2 sm:grid-cols-3">
       {links.map((p) => (
         <a
           key={p.id}
@@ -60,9 +65,14 @@ export default function PlatformButtons({
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => handleClick(p.id)}
-          className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-cream transition-colors hover:border-white/25 hover:bg-white/10"
+          className="flex min-h-[50px] items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black text-cream transition-colors hover:bg-white/10"
+          style={{
+            borderColor: `${p.color}55`,
+            backgroundColor: `${p.color}12`,
+          }}
+          aria-label={`Listen on ${p.name}`}
         >
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
           {p.name}
         </a>
       ))}

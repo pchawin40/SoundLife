@@ -5,6 +5,7 @@ interface SongCardProps {
   song: Song;
   rank: number;
   resultIdentity?: string;
+  note?: string;
 }
 
 function formatSlug(slug: string): string {
@@ -14,7 +15,12 @@ function formatSlug(slug: string): string {
     .join(" ");
 }
 
-export default function SongCard({ song, rank, resultIdentity }: SongCardProps) {
+export default function SongCard({
+  song,
+  rank,
+  resultIdentity,
+  note,
+}: SongCardProps) {
   const metaChips = [
     song.language !== "english" && song.language !== "instrumental"
       ? formatSlug(song.language)
@@ -23,40 +29,45 @@ export default function SongCard({ song, rank, resultIdentity }: SongCardProps) 
     song.era ?? null,
   ].filter((c): c is string => Boolean(c));
 
+  const reason = note ?? `A strong fit for ${resultIdentity ?? "this result"}.`;
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 w-6 shrink-0 text-right text-sm font-bold tabular-nums text-cream/40">
-          {rank}
+    <article className="rounded-[22px] border border-white/10 bg-[#17130f] p-4 shadow-card transition-transform duration-200 hover:-translate-y-0.5 hover:border-white/20 sm:p-5">
+      <div className="flex items-start justify-between gap-4">
+        <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-black tabular-nums text-cream/50">
+          {String(rank).padStart(2, "0")}
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="truncate text-base font-bold leading-tight text-cream">
-              {song.title}
-            </p>
-            {metaChips.length > 0 && (
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-cream/35">
-                {metaChips.join(" · ")}
-              </span>
-            )}
-          </div>
-          <p className="truncate text-sm text-cream/60">{song.artist}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {song.chips.map((chip) => (
-              <span
-                key={chip.label}
-                className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-cream/75"
-              >
-                <span aria-hidden>{chip.emoji}</span>
-                {chip.label}
-              </span>
-            ))}
-          </div>
-          <div className="mt-2.5">
-            <PlatformButtons song={song} resultIdentity={resultIdentity} compact />
-          </div>
-        </div>
+        {metaChips.length > 0 && (
+          <span className="min-w-0 text-right text-[10px] font-black uppercase tracking-[0.13em] text-cream/40">
+            {metaChips.join(" · ")}
+          </span>
+        )}
       </div>
-    </div>
+
+      <div className="mt-4">
+        <h4 className="text-xl font-black leading-tight tracking-tight text-cream">
+          {song.title}
+        </h4>
+        <p className="mt-1 text-sm font-semibold text-cream/60">{song.artist}</p>
+      </div>
+
+      <p className="mt-4 text-sm font-medium leading-6 text-cream/60">{reason}</p>
+
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {song.chips.slice(0, 3).map((chip) => (
+          <span
+            key={chip.label}
+            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-cream/75"
+          >
+            <span aria-hidden>{chip.emoji}</span>
+            {chip.label}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-4">
+        <PlatformButtons song={song} resultIdentity={resultIdentity} compact />
+      </div>
+    </article>
   );
 }

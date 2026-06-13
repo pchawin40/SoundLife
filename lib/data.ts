@@ -51,8 +51,8 @@ export const TRAIT_VERDICTS: Record<Trait, string> = {
   focus: "Locked in. Your notifications are scared of you.",
   romance: "Lovesick, but make it a soundtrack.",
   cinematic: "You're not sad. You're cinematic.",
-  aggression: "Controlled aggression. The gym is your therapist.",
-  warmth: "Golden hour follows you around.",
+  aggression: "Gym villain arc unlocked.",
+  warmth: "Global heat with late-night confidence.",
 };
 
 /* ------------------------------------------------------------------ */
