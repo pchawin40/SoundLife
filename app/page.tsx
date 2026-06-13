@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import LandingPage from "@/components/LandingPage";
@@ -11,11 +11,14 @@ import { loadCatalog } from "@/lib/catalog";
 import { getDailyPrompt } from "@/lib/daily";
 import { buildDeck } from "@/lib/engine";
 import { encodeResultParams } from "@/lib/match";
+import { getStorageJson } from "@/lib/storage";
+import { EMPTY_PROFILE_STATE } from "@/lib/streak";
 import type {
   Catalog,
   FilterId,
   RoastIntensity,
   Scenario,
+  SoundLifeProfileState,
   Step,
   VibeCardData,
 } from "@/lib/types";
@@ -29,10 +32,17 @@ export default function Home() {
   const [deckLength, setDeckLength] = useState<number>(10);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [deck, setDeck] = useState<VibeCardData[]>([]);
+  const [profile, setProfile] = useState<SoundLifeProfileState>(EMPTY_PROFILE_STATE);
 
   useEffect(() => {
     setCatalog(loadCatalog(setCatalog));
+    setProfile(getStorageJson("profile", EMPTY_PROFILE_STATE));
   }, []);
+
+  const dailyScenario = useMemo(() => {
+    const daily = getDailyPrompt();
+    return catalog.scenarios.find((s) => s.id === daily.scenarioId) ?? null;
+  }, [catalog]);
 
   const pickScenario = (next: Scenario) => {
     setScenario(next);
@@ -95,7 +105,7 @@ export default function Home() {
               type="button"
               onClick={goBack}
               aria-label="Go back"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-lg text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-surface text-lg text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
             >
               ←
             </button>
@@ -119,6 +129,10 @@ export default function Home() {
               <LandingPage
                 onStart={startDaily}
                 onChooseScene={() => setStep("scenario")}
+                streak={profile.currentStreak}
+                collectionCount={profile.collection.length}
+                dailyEmoji={dailyScenario?.emoji}
+                dailyLabel={dailyScenario?.label}
               />
             )}
             {step === "scenario" && (

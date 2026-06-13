@@ -45,7 +45,7 @@ function recomputeEncodedResult(catalog: Catalog, encoded: string | null): Resul
 function IdentityMiniCard({ label, result }: { label: string; result: ResultData }) {
   const primary = TRAIT_META[result.traits[0].trait];
   return (
-    <article className="min-w-0 rounded-3xl border border-gray-100 bg-white p-5 shadow-card">
+    <article className="min-w-0 rounded-3xl border border-gray-100 bg-surface p-5 shadow-card">
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
         {label}
       </p>
@@ -120,7 +120,7 @@ function MatchContent() {
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <span className="text-5xl" aria-hidden>🎧</span>
         <h1 className="text-3xl font-black text-ink">This match link lost the plot</h1>
-        <Link href="/" className="rounded-full bg-ink px-7 py-3 text-sm font-black text-white">
+        <Link href="/" className="rounded-full bg-ink px-7 py-3 text-sm font-black text-paper">
           Make a fresh SoundLife
         </Link>
       </div>
@@ -147,7 +147,7 @@ function MatchContent() {
             match.sharedTraits.map((trait) => (
               <span
                 key={trait}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-black text-gray-600"
+                className="rounded-full border border-gray-200 bg-surface px-3 py-1 text-xs font-black text-gray-600"
               >
                 {TRAIT_META[trait].emoji} shared {TRAIT_META[trait].label.toLowerCase()}
               </span>
@@ -175,13 +175,13 @@ function MatchContent() {
               <button
                 type="button"
                 onClick={copyInvite}
-                className="min-h-[48px] rounded-full bg-ink px-6 text-sm font-black text-white"
+                className="min-h-[48px] rounded-full bg-ink px-6 text-sm font-black text-paper"
               >
                 Copy friend handoff
               </button>
               <Link
                 href={invitePath}
-                className="flex min-h-[48px] items-center justify-center rounded-full border border-gray-200 bg-white px-6 text-sm font-black text-gray-700"
+                className="flex min-h-[48px] items-center justify-center rounded-full border border-gray-200 bg-surface px-6 text-sm font-black text-gray-700"
               >
                 Open handoff
               </Link>
@@ -197,7 +197,7 @@ function MatchContent() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-card-lg">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-gray-200 bg-surface px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-card-lg">
           {toast}
         </div>
       )}

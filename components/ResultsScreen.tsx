@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import CollectionGrid from "./CollectionGrid";
+import PlusTease from "./PlusTease";
+import RevealOverlay from "./RevealOverlay";
 import ShareResultCard from "./ShareResultCard";
 import SongCard from "./SongCard";
 import StreakBadge from "./StreakBadge";
@@ -18,11 +20,25 @@ import {
 } from "@/lib/spotify";
 import { getStorageJson, setStorageJson } from "@/lib/storage";
 import {
+  deriveIdentityRarity,
   EMPTY_PROFILE_STATE,
   makeCollectionItem,
   updateSoundLifeProfile,
 } from "@/lib/streak";
-import type { Catalog, ResultData, Song, SoundLifeProfileState } from "@/lib/types";
+import type {
+  Catalog,
+  IdentityRarity,
+  ResultData,
+  Song,
+  SoundLifeProfileState,
+} from "@/lib/types";
+
+const RARITY_BADGE: Record<IdentityRarity, string> = {
+  common: "border-gray-300 bg-gray-100 text-gray-600",
+  uncommon: "border-teal-200 bg-teal-50 text-teal-700",
+  rare: "border-purple-200 bg-purple-50 text-purple-700",
+  legendary: "border-amber-200 bg-amber-50 text-amber-700",
+};
 
 interface ResultsScreenProps {
   result: ResultData;
@@ -115,7 +131,7 @@ function PlaylistMode({ result }: { result: ResultData }) {
   ];
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h4 className="text-lg font-black text-ink">Playlist Mode</h4>
@@ -180,7 +196,7 @@ function PlaylistMode({ result }: { result: ResultData }) {
 
       <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-3">
         <div
-          className="grid grid-cols-3 gap-1.5 rounded-2xl border border-gray-200 bg-white p-1.5"
+          className="grid grid-cols-3 gap-1.5 rounded-2xl border border-gray-200 bg-surface p-1.5"
           role="radiogroup"
           aria-label="Open next song platform"
         >
@@ -206,7 +222,7 @@ function PlaylistMode({ result }: { result: ResultData }) {
         <button
           type="button"
           onClick={openNextSong}
-          className="mt-3 flex min-h-[44px] w-full items-center justify-center rounded-full bg-ink px-4 text-sm font-black text-white transition-colors hover:bg-gray-800 active:scale-95"
+          className="mt-3 flex min-h-[44px] w-full items-center justify-center rounded-full bg-ink px-4 text-sm font-black text-paper transition-colors hover:bg-gray-800 active:scale-95"
         >
           Open next song
         </button>
@@ -247,12 +263,21 @@ function PlaylistMode({ result }: { result: ResultData }) {
 export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreenProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [profile, setProfile] = useState<SoundLifeProfileState>(EMPTY_PROFILE_STATE);
+  const [showReveal, setShowReveal] = useState(true);
   const savedResult = useRef<string | null>(null);
   const scenario = catalog.scenarios.find((s) => s.id === result.scenarioId);
   const filter = getFilter(result.filterId);
   const verdict = TRAIT_VERDICTS[result.traits[0].trait];
   const songGroups = useMemo(() => groupSongs(result.songs), [result.songs]);
   const topTrait = TRAIT_META[result.traits[0].trait];
+  const rarity = useMemo(
+    () =>
+      deriveIdentityRarity(
+        result.traits.slice(0, 3).map((t) => t.trait),
+        result.matchPercent
+      ),
+    [result]
+  );
 
   useEffect(() => {
     if (!toast) return;
@@ -313,6 +338,17 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col pb-12">
+      <AnimatePresence>
+        {showReveal && (
+          <RevealOverlay
+            result={result}
+            rarity={rarity}
+            scenarioEmoji={scenario?.emoji ?? "🎧"}
+            onDone={() => setShowReveal(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -340,9 +376,16 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12, duration: 0.4 }}
           >
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-amber">
-              Your music identity
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-amber">
+                Your music identity
+              </p>
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${RARITY_BADGE[rarity]}`}
+              >
+                ✦ {rarity}
+              </span>
+            </div>
             <h1 className="mt-3 text-4xl font-black leading-[0.98] tracking-tight text-ink sm:text-5xl">
               {result.identity}
             </h1>
@@ -385,14 +428,14 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
           </motion.div>
 
           {result.likedCount === 0 && (
-            <p className="mt-5 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm font-medium text-gray-500 shadow-sm">
+            <p className="mt-5 rounded-2xl border border-gray-100 bg-surface px-4 py-3 text-sm font-medium text-gray-500 shadow-sm">
               You passed on every card. Respect. This is pure{" "}
               {scenario?.label.toLowerCase()} energy, no extra seasoning.
             </p>
           )}
 
           {/* Why this matched */}
-          <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <section className="mt-6 rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-amber">
               Why this playlist
             </p>
@@ -438,7 +481,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
               ))}
             </div>
             {process.env.NODE_ENV !== "production" && result.scoreDebug && (
-              <details className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-white p-3">
+              <details className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-surface p-3">
                 <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-gray-400">
                   Scoring debug
                 </summary>
@@ -496,7 +539,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
             <button
               type="button"
               onClick={handleCopyShare}
-              className="min-h-[54px] rounded-full bg-ink px-5 text-sm font-black text-white shadow-card transition-colors hover:bg-gray-800 active:scale-95"
+              className="min-h-[54px] rounded-full bg-ink px-5 text-sm font-black text-paper shadow-card transition-colors hover:bg-gray-800 active:scale-95"
             >
               Copy result
             </button>
@@ -510,7 +553,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
             <button
               type="button"
               onClick={onRedo}
-              className="min-h-[54px] rounded-full border border-gray-200 bg-white px-5 text-sm font-black text-gray-700 transition-colors hover:bg-gray-50 active:scale-95"
+              className="min-h-[54px] rounded-full border border-gray-200 bg-surface px-5 text-sm font-black text-gray-700 transition-colors hover:bg-gray-50 active:scale-95"
             >
               Redo vibe
             </button>
@@ -524,7 +567,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
           {/* Sound profile */}
           <section className="mt-10">
             <SectionTitle>Your sound profile</SectionTitle>
-            <div className="mt-4 space-y-3.5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <div className="mt-4 space-y-3.5 rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm">
               {result.traits.map((stat, i) => (
                 <TraitBar key={stat.trait} stat={stat} index={i} />
               ))}
@@ -583,7 +626,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
                 ))}
               </div>
             ) : (
-              <p className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 text-sm text-gray-500">
+              <p className="mt-4 rounded-2xl border border-gray-100 bg-surface p-4 text-sm text-gray-500">
                 Hmm, no tracks matched that combination. Hit &quot;Redo vibe&quot; and try another mix.
               </p>
             )}
@@ -602,7 +645,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
                   href={`https://open.spotify.com/search/${encodeURIComponent(artist)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+                  className="rounded-full border border-gray-200 bg-surface px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
                 >
                   {artist}
                 </a>
@@ -622,13 +665,18 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
                   key={name}
                   type="button"
                   onClick={() => handleCopyPlaylist(name)}
-                  className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 text-left text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:scale-[0.98]"
+                  className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-gray-100 bg-surface px-4 text-left text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:scale-[0.98]"
                 >
                   <span aria-hidden>🎧</span>
                   {name}
                 </button>
               ))}
             </div>
+          </section>
+
+          {/* Plus tease */}
+          <section className="mt-10">
+            <PlusTease />
           </section>
 
           <p className="mt-12 text-center text-xs text-gray-400">
@@ -644,7 +692,7 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-card-lg"
+            className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-gray-200 bg-surface px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-card-lg"
           >
             {toast}
           </motion.div>

@@ -161,7 +161,7 @@ export interface TraitStat {
 
 export type RoastIntensity = "soft" | "accurate" | "roast";
 
-export type ShareCardVariant = "identity" | "roast" | "aux";
+export type ShareCardVariant = "story" | "identity" | "roast" | "aux";
 
 export interface ArchetypeColorTheme {
   background: string;

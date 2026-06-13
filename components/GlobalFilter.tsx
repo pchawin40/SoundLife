@@ -40,7 +40,7 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search language, genre, or region..."
-          className="block w-full min-w-0 rounded-2xl border border-gray-200 bg-white py-2.5 pl-8 pr-10 text-sm font-medium text-ink placeholder-gray-400 outline-none transition-colors focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20"
+          className="block w-full min-w-0 rounded-2xl border border-gray-200 bg-surface py-2.5 pl-8 pr-10 text-sm font-medium text-ink placeholder-gray-400 outline-none transition-colors focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20"
         />
         {query && (
           <button
@@ -72,7 +72,7 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
                 className={`min-h-[38px] max-w-[180px] shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-bold transition-all sm:max-w-none ${
                   isActive
                     ? "border-brand-teal bg-brand-teal text-white shadow-sm"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-brand-teal/40 hover:text-brand-teal"
+                    : "border-gray-200 bg-surface text-gray-600 hover:border-brand-teal/40 hover:text-brand-teal"
                 }`}
               >
                 <span className="block truncate">

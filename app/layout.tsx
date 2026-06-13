@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import ThemeToggle from "@/components/ThemeToggle";
+
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('soundlife:theme');var d=t==='dark'||((t==='system'||!t)&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
 
 function getMetadataBase(): URL {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://soundlife.app";
@@ -24,15 +27,24 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#FAFAF8",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FAFAF8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D0D10" },
+  ],
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <div className="fixed right-4 top-4 z-[60]">
+          <ThemeToggle />
+        </div>
+        {children}
+      </body>
     </html>
   );
 }

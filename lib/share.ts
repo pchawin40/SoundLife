@@ -1,5 +1,13 @@
 import { TRAIT_META } from "./data";
-import type { ResultData, ShareCardVariant, TraitStat } from "./types";
+import { deriveIdentityRarity } from "./streak";
+import type { IdentityRarity, ResultData, ShareCardVariant, TraitStat } from "./types";
+
+const RARITY_HEX: Record<IdentityRarity, string> = {
+  common: "#D4D4D8",
+  uncommon: "#2DD4BF",
+  rare: "#C084FC",
+  legendary: "#FBBF24",
+};
 
 function traitBar(stat: TraitStat): string {
   const filled = Math.max(1, Math.min(5, Math.round(stat.percent / 20)));
@@ -223,7 +231,7 @@ function paintGlow(
   gradient.addColorStop(0, `${color}3D`);
   gradient.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
 function roundRect(
@@ -319,4 +327,186 @@ function truncate(
     cut = cut.slice(0, -1);
   }
   return `${cut}…`;
+}
+
+/* ---------------------- story card (9:16) ---------------------- */
+
+const STORY_W = 1080;
+const STORY_H = 1920;
+const SPAD = 84;
+
+const STORY_SANS =
+  '-apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Noto Sans Thai", sans-serif';
+
+function drawMatchRing(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  percent: number,
+  color: string,
+  textColor: string
+): void {
+  ctx.save();
+  ctx.lineWidth = 18;
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = color;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (percent / 100));
+  ctx.stroke();
+  ctx.lineCap = "butt";
+  ctx.textAlign = "center";
+  ctx.fillStyle = textColor;
+  ctx.font = `900 56px ${STORY_SANS}`;
+  ctx.fillText(`${percent}%`, cx, cy + 6);
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = `900 22px ${STORY_SANS}`;
+  ctx.fillText("M A T C H", cx, cy + 44);
+  ctx.restore();
+}
+
+function drawRarityPill(
+  ctx: CanvasRenderingContext2D,
+  rarity: IdentityRarity,
+  rightX: number,
+  topY: number
+): void {
+  const color = RARITY_HEX[rarity];
+  const label = rarity.toUpperCase();
+  ctx.font = `900 28px ${STORY_SANS}`;
+  const w = ctx.measureText(label).width + 64;
+  const x = rightX - w;
+  roundRect(ctx, x, topY, w, 56, 28);
+  ctx.fillStyle = `${color}24`;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = `${color}88`;
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.fillText(label, x + 32, topY + 38);
+}
+
+function drawStory(
+  ctx: CanvasRenderingContext2D,
+  result: ResultData,
+  scenarioEmoji: string
+): void {
+  const primary = TRAIT_META[result.traits[0].trait];
+  const secondary = TRAIT_META[result.traits[1]?.trait ?? result.traits[0].trait];
+  const theme = result.archetype.colorTheme;
+  const cream = theme.text || "#F5F1EA";
+  const rarity = deriveIdentityRarity(
+    result.traits.slice(0, 3).map((t) => t.trait),
+    result.matchPercent
+  );
+
+  ctx.fillStyle = theme.background;
+  ctx.fillRect(0, 0, STORY_W, STORY_H);
+  paintGlow(ctx, STORY_W * 0.5, STORY_H * 0.04, STORY_W * 0.9, theme.accent);
+  paintGlow(ctx, STORY_W * 0.88, STORY_H * 0.92, STORY_W * 0.65, primary.color);
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = `900 30px ${STORY_SANS}`;
+  ctx.fillText("S O U N D L I F E", SPAD, SPAD + 38);
+  drawRarityPill(ctx, rarity, STORY_W - SPAD, SPAD + 4);
+
+  ctx.fillStyle = cream;
+  ctx.font = `120px ${STORY_SANS}`;
+  ctx.fillText(result.archetype.emoji || scenarioEmoji, SPAD, SPAD + 232);
+
+  ctx.fillStyle = cream;
+  const nameSize = result.identity.length > 22 ? 92 : 112;
+  ctx.font = `900 ${nameSize}px ${STORY_SANS}`;
+  let y = drawWrappedText(ctx, result.identity, SPAD, SPAD + 372, STORY_W * 0.6, nameSize * 1.02, 3);
+  drawMatchRing(ctx, STORY_W - SPAD - 104, SPAD + 322, 100, result.matchPercent, primary.color, cream);
+
+  y += 34;
+  ctx.fillStyle = "rgba(255,255,255,0.74)";
+  ctx.font = `600 42px ${STORY_SANS}`;
+  const hook =
+    result.roastIntensity === "roast" ? result.archetype.roastCopy : result.archetype.diagnosis;
+  y = drawWrappedText(ctx, hook, SPAD, y, STORY_W - SPAD * 2, 56, 3) + 48;
+
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.font = `900 28px ${STORY_SANS}`;
+  ctx.fillText("Y O U R  S O U N D", SPAD, y);
+  y += 56;
+  const barX = SPAD + 360;
+  const barW = STORY_W - SPAD - barX;
+  for (const stat of result.traits.slice(0, 3)) {
+    const meta = TRAIT_META[stat.trait];
+    ctx.fillStyle = cream;
+    ctx.font = `700 40px ${STORY_SANS}`;
+    ctx.fillText(`${meta.emoji} ${meta.label}`, SPAD, y + 16);
+    roundRect(ctx, barX, y - 6, barW, 24, 12);
+    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    ctx.fill();
+    roundRect(ctx, barX, y - 6, Math.max(24, (barW * stat.percent) / 100), 24, 12);
+    ctx.fillStyle = meta.color;
+    ctx.fill();
+    y += 70;
+  }
+
+  y += 30;
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.font = `900 28px ${STORY_SANS}`;
+  ctx.fillText("T O N I G H T ' S  T O P  3", SPAD, y);
+  y += 64;
+  let rank = 1;
+  for (const song of result.songs.slice(0, 3)) {
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.font = `900 38px ${STORY_SANS}`;
+    ctx.fillText(String(rank), SPAD, y);
+    ctx.fillStyle = cream;
+    ctx.font = `800 44px ${STORY_SANS}`;
+    ctx.fillText(truncate(ctx, song.title, STORY_W - SPAD * 2 - 72), SPAD + 60, y);
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = `500 34px ${STORY_SANS}`;
+    ctx.fillText(truncate(ctx, song.artist, STORY_W - SPAD * 2 - 72), SPAD + 60, y + 44);
+    y += 104;
+    rank += 1;
+  }
+
+  ctx.fillStyle = `${secondary.color}1F`;
+  roundRect(ctx, SPAD, STORY_H - SPAD - 150, STORY_W - SPAD * 2, 132, 32);
+  ctx.fill();
+  ctx.fillStyle = cream;
+  ctx.font = `800 48px ${STORY_SANS}`;
+  ctx.fillText("what's your sound?", SPAD + 44, STORY_H - SPAD - 84);
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = `600 34px ${STORY_SANS}`;
+  ctx.fillText("soundlife.app · swipe yours in 30s", SPAD + 44, STORY_H - SPAD - 40);
+}
+
+export async function renderStoryImage(
+  result: ResultData,
+  scenarioEmoji: string
+): Promise<Blob | null> {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = STORY_W;
+  canvas.height = STORY_H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  drawStory(ctx, result, scenarioEmoji);
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+}
+
+export function renderStoryDataUrl(
+  result: ResultData,
+  scenarioEmoji: string
+): string | null {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = STORY_W;
+  canvas.height = STORY_H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  drawStory(ctx, result, scenarioEmoji);
+  return canvas.toDataURL("image/png");
 }

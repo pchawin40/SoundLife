@@ -76,7 +76,7 @@ function SpotifyCallbackContent() {
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center py-12 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink text-sm font-black uppercase tracking-[0.18em] text-white">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink text-sm font-black uppercase tracking-[0.18em] text-paper">
         SL
       </div>
       <p className="mt-6 text-xs font-black uppercase tracking-[0.22em] text-brand-amber">
@@ -95,7 +95,7 @@ function SpotifyCallbackContent() {
       )}
 
       {!error && (
-        <ol className="mt-8 w-full space-y-2 rounded-3xl border border-gray-100 bg-white p-4 text-left shadow-sm">
+        <ol className="mt-8 w-full space-y-2 rounded-3xl border border-gray-100 bg-surface p-4 text-left shadow-sm">
           {STEPS.map((item, index) => {
             const complete = index < activeIndex || step === "done";
             const active = index === activeIndex && step !== "done";
@@ -122,14 +122,14 @@ function SpotifyCallbackContent() {
         {playlistUrl && (
           <a
             href={playlistUrl}
-            className="flex min-h-[48px] items-center justify-center rounded-full bg-ink px-6 text-sm font-black text-white"
+            className="flex min-h-[48px] items-center justify-center rounded-full bg-ink px-6 text-sm font-black text-paper"
           >
             Open Spotify playlist
           </a>
         )}
         <Link
           href="/"
-          className="flex min-h-[48px] items-center justify-center rounded-full border border-gray-200 bg-white px-6 text-sm font-black text-gray-700"
+          className="flex min-h-[48px] items-center justify-center rounded-full border border-gray-200 bg-surface px-6 text-sm font-black text-gray-700"
         >
           Back to SoundLife
         </Link>

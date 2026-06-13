@@ -51,7 +51,7 @@ export default function DailyPage() {
           <Link
             href="/"
             aria-label="Go home"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-lg text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-surface text-lg text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
           >
             ←
           </Link>

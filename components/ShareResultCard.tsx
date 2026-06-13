@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { TRAIT_META } from "@/lib/data";
-import { renderShareImage } from "@/lib/share";
+import { renderShareImage, renderStoryImage, renderStoryDataUrl } from "@/lib/share";
 import type { ResultData, ShareCardVariant } from "@/lib/types";
 
 interface ShareResultCardProps {
@@ -18,21 +18,31 @@ export default function ShareResultCard({
   onToast,
 }: ShareResultCardProps) {
   const [saving, setSaving] = useState(false);
-  const [variant, setVariant] = useState<ShareCardVariant>("identity");
+  const [variant, setVariant] = useState<ShareCardVariant>("story");
+  const [storyUrl, setStoryUrl] = useState<string | null>(null);
   const primary = TRAIT_META[result.traits[0].trait];
   const secondary = TRAIT_META[result.traits[1]?.trait ?? result.traits[0].trait];
   const theme = result.archetype.colorTheme;
   const variants: Array<{ id: ShareCardVariant; label: string }> = [
-    { id: "identity", label: "Identity Card" },
-    { id: "roast", label: "Roast Card" },
-    { id: "aux", label: "Aux Card" },
+    { id: "story", label: "Story" },
+    { id: "identity", label: "Identity" },
+    { id: "roast", label: "Roast" },
+    { id: "aux", label: "Aux" },
   ];
+
+  useEffect(() => {
+    if (variant !== "story") return;
+    setStoryUrl(renderStoryDataUrl(result, scenarioEmoji));
+  }, [variant, result, scenarioEmoji]);
 
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      const blob = await renderShareImage(result, scenarioEmoji, variant);
+      const blob =
+        variant === "story"
+          ? await renderStoryImage(result, scenarioEmoji)
+          : await renderShareImage(result, scenarioEmoji, variant);
       if (!blob) {
         onToast("Couldn't render the card — try a screenshot!");
         return;
@@ -61,7 +71,7 @@ export default function ShareResultCard({
   return (
     <div>
       <div
-        className="mx-auto mb-3 grid w-full max-w-[410px] grid-cols-3 gap-1.5 rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm"
+        className="mx-auto mb-3 grid w-full max-w-[410px] grid-cols-4 gap-1.5 rounded-2xl border border-gray-200 bg-surface p-1.5 shadow-sm"
         role="tablist"
         aria-label="Share card variant"
       >
@@ -76,7 +86,7 @@ export default function ShareResultCard({
               onClick={() => setVariant(item.id)}
               className={`min-h-[38px] rounded-xl px-2 text-[11px] font-black transition-colors ${
                 active
-                  ? "bg-ink text-white"
+                  ? "bg-ink text-paper"
                   : "text-gray-500 hover:bg-gray-50 hover:text-ink"
               }`}
             >
@@ -86,12 +96,37 @@ export default function ShareResultCard({
         })}
       </div>
 
+      {variant === "story" ? (
+        <motion.div
+          key="story"
+          initial={{ opacity: 0, scale: 0.94, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="mx-auto w-full max-w-[300px]"
+        >
+          {storyUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={storyUrl}
+              alt={`${result.identity} — SoundLife story card`}
+              className="w-full rounded-[24px] shadow-card-lg ring-1 ring-black/10"
+            />
+          ) : (
+            <div
+              className="aspect-[9/16] w-full animate-pulse rounded-[24px]"
+              style={{ backgroundColor: theme.background }}
+            />
+          )}
+        </motion.div>
+      ) : (
       <motion.div
         key={variant}
         initial={{ opacity: 0, scale: 0.94, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative mx-auto flex aspect-square w-full max-w-[410px] flex-col overflow-hidden rounded-[28px] border border-gray-100 p-6 shadow-card-lg"
+        className={`relative mx-auto flex aspect-square w-full max-w-[410px] flex-col overflow-hidden rounded-[28px] border border-gray-100 p-6 shadow-card-lg ${
+          variant === "identity" ? "force-light" : "force-dark"
+        }`}
         style={{
           background:
             variant === "identity"
@@ -121,7 +156,7 @@ export default function ShareResultCard({
               {result.identity}
             </h2>
 
-            <div className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-bold text-gray-700">
+            <div className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3 py-1 text-sm font-bold text-gray-700">
               <span
                 className="h-2 w-2 rounded-full"
                 style={{ backgroundColor: primary.color }}
@@ -256,14 +291,15 @@ export default function ShareResultCard({
           </>
         )}
       </motion.div>
+      )}
 
       <button
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className="mx-auto mt-3 flex min-h-[46px] w-full max-w-[410px] items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-black text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:scale-[0.98] disabled:opacity-50"
+        className="mx-auto mt-3 flex min-h-[46px] w-full max-w-[410px] items-center justify-center gap-2 rounded-full border border-gray-200 bg-surface px-4 text-sm font-black text-gray-700 shadow-sm transition-colors hover:bg-gray-50 active:scale-[0.98] disabled:opacity-50"
       >
-        {saving ? "Rendering…" : "⬇ Save / share this card"}
+        {saving ? "Rendering…" : variant === "story" ? "⬇ Save / share story" : "⬇ Save / share this card"}
       </button>
     </div>
   );

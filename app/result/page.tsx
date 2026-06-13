@@ -13,7 +13,7 @@ import { computeResults } from "@/lib/engine";
 import { getStorageJson } from "@/lib/storage";
 import type { Catalog, FilterId, RoastIntensity, VibeCardData } from "@/lib/types";
 
-const BUILDING_DELAY_MS = 1600;
+const BUILDING_DELAY_MS = 1000;
 const ROAST_INTENSITIES: RoastIntensity[] = ["soft", "accurate", "roast"];
 
 function parseRoastIntensity(value: string | null): RoastIntensity {

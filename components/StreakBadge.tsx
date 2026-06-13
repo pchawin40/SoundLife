@@ -18,7 +18,7 @@ export default function StreakBadge({ profile, compact = false }: StreakBadgePro
   }
 
   return (
-    <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-orange-100 bg-surface p-4 shadow-sm">
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">
         Sound streak
       </p>

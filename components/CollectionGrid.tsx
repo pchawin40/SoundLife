@@ -19,7 +19,7 @@ export default function CollectionGrid({ items, limit = 6 }: CollectionGridProps
   const visible = items.slice(0, limit);
 
   return (
-    <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-gray-100 bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
@@ -32,7 +32,7 @@ export default function CollectionGrid({ items, limit = 6 }: CollectionGridProps
         {items.length > 0 && (
           <a
             href="/collection"
-            className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-black text-gray-500 transition-colors hover:bg-white hover:text-gray-800"
+            className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-black text-gray-500 transition-colors hover:bg-surface hover:text-gray-800"
           >
             View all →
           </a>
@@ -45,7 +45,7 @@ export default function CollectionGrid({ items, limit = 6 }: CollectionGridProps
             <a
               key={item.id}
               href={item.sharePath}
-              className="min-w-0 rounded-2xl border border-gray-100 bg-gray-50 p-3 transition-colors hover:bg-white"
+              className="min-w-0 rounded-2xl border border-gray-100 bg-gray-50 p-3 transition-colors hover:bg-surface"
             >
               <span
                 className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] ${RARITY_STYLE[item.rarity]}`}

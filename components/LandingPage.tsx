@@ -8,6 +8,10 @@ import type { VibeCardData } from "@/lib/types";
 interface LandingPageProps {
   onStart: () => void;
   onChooseScene?: () => void;
+  streak?: number;
+  collectionCount?: number;
+  dailyEmoji?: string;
+  dailyLabel?: string;
 }
 
 const SCENE_CHIPS: Array<{ emoji: string; label: string; id: string }> = [
@@ -111,7 +115,7 @@ function AnimatedPreviewDeck() {
       transition={{ duration: 0.65, ease: "easeOut", delay: 0.12 }}
       className="mx-auto w-full max-w-[430px] lg:max-w-[470px]"
     >
-      <div className="relative aspect-[0.76] w-full overflow-hidden rounded-[32px] bg-white shadow-card-lg ring-1 ring-black/[0.05]">
+      <div className="relative aspect-[0.76] w-full overflow-hidden rounded-[32px] bg-surface shadow-card-lg ring-1 ring-black/[0.05]">
         <AnimatePresence mode="wait">
           <motion.div
             key={card.id}
@@ -171,7 +175,14 @@ function AnimatedPreviewDeck() {
   );
 }
 
-export default function LandingPage({ onStart, onChooseScene }: LandingPageProps) {
+export default function LandingPage({
+  onStart,
+  onChooseScene,
+  streak = 0,
+  collectionCount = 0,
+  dailyEmoji,
+  dailyLabel,
+}: LandingPageProps) {
   return (
     <div className="flex w-full flex-1 flex-col">
       <section className="grid min-h-[calc(100dvh-2.5rem)] w-full items-center gap-10 py-8 sm:py-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(360px,0.72fr)] lg:gap-16">
@@ -181,7 +192,7 @@ export default function LandingPage({ onStart, onChooseScene }: LandingPageProps
           transition={{ duration: 0.55, ease: "easeOut" }}
           className="mx-auto flex w-full max-w-2xl flex-col items-start text-left"
         >
-          <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-gray-600 shadow-sm">
+          <div className="inline-flex items-center rounded-full border border-gray-200 bg-surface px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-gray-600 shadow-sm">
             SoundLife
           </div>
 
@@ -193,15 +204,31 @@ export default function LandingPage({ onStart, onChooseScene }: LandingPageProps
             Swipe a few cards. Get your sound identity and a playlist that actually feels like you.
           </p>
 
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+          {/* Daily + streak strip */}
+          {dailyLabel && (
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-teal/20 bg-brand-teal/10 px-3 py-1.5 text-xs font-black text-brand-teal">
+                <span aria-hidden>{dailyEmoji ?? "🎧"}</span>
+                Sound of the Day · {dailyLabel}
+              </span>
+              {streak > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-700">
+                  <span aria-hidden>🔥</span>
+                  {streak} day{streak === 1 ? "" : "s"} — keep it alive
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
             <motion.button
               type="button"
               onClick={onStart}
               whileHover={{ y: -2, scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
-              className="min-h-[58px] rounded-full bg-ink px-9 text-base font-black text-white shadow-card-lg transition-colors hover:bg-gray-800"
+              className="min-h-[58px] rounded-full bg-ink px-9 text-base font-black text-paper shadow-card-lg transition-colors hover:bg-gray-800"
             >
-              Start swiping
+              {streak > 0 ? "Continue your streak" : "Start swiping"}
             </motion.button>
             <p className="text-sm font-semibold text-gray-400">No login. 30 seconds.</p>
           </div>
@@ -218,7 +245,7 @@ export default function LandingPage({ onStart, onChooseScene }: LandingPageProps
                     key={chip.id}
                     type="button"
                     onClick={onChooseScene}
-                    className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+                    className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3.5 py-2 text-sm font-semibold text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
                   >
                     <span aria-hidden>{chip.emoji}</span>
                     {chip.label}
@@ -226,6 +253,15 @@ export default function LandingPage({ onStart, onChooseScene }: LandingPageProps
                 ))}
               </div>
             </div>
+          )}
+
+          {collectionCount > 0 && (
+            <a
+              href="/collection"
+              className="mt-6 inline-flex items-center gap-1 text-sm font-bold text-gray-500 transition-colors hover:text-ink"
+            >
+              Your collection · {collectionCount} discovered →
+            </a>
           )}
         </motion.div>
 

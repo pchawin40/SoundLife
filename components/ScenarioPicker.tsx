@@ -105,7 +105,7 @@ export default function ScenarioPicker({
               transition={{ duration: 0.35, delay: 0.05 + i * 0.04 }}
               whileHover={{ y: -5, scale: 1.01 }}
               whileTap={{ scale: 0.97, y: 0 }}
-              className={`group relative min-h-[164px] overflow-hidden rounded-[24px] border border-gray-100 bg-white p-5 text-left shadow-card outline-none transition-all hover:shadow-card-lg focus-visible:ring-2 focus-visible:ring-brand-teal/40 sm:min-h-[184px] ${
+              className={`group relative min-h-[164px] overflow-hidden rounded-[24px] border border-gray-100 bg-surface p-5 text-left shadow-card outline-none transition-all hover:shadow-card-lg focus-visible:ring-2 focus-visible:ring-brand-teal/40 sm:min-h-[184px] ${
                 isRandom ? "col-span-2 lg:col-span-3" : ""
               }`}
             >
@@ -126,7 +126,7 @@ export default function ScenarioPicker({
                 <span className="flex items-start justify-between gap-3">
                   <span
                     className="flex h-12 w-12 items-center justify-center rounded-2xl border text-3xl shadow-sm sm:h-14 sm:w-14"
-                    style={{ borderColor: `${detail.accent}30`, backgroundColor: detail.bg }}
+                    style={{ borderColor: `${detail.accent}30`, backgroundColor: `${detail.accent}1A` }}
                     aria-hidden
                   >
                     {scenario.emoji}
@@ -164,7 +164,7 @@ export default function ScenarioPicker({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.32 }}
-        className="mt-8 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+        className="mt-8 rounded-2xl border border-gray-100 bg-surface p-5 shadow-sm"
       >
         <div className="grid min-w-0 gap-6 overflow-hidden lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)] lg:items-start">
           <div className="min-w-0 overflow-hidden">
@@ -195,14 +195,14 @@ export default function ScenarioPicker({
                     onClick={() => onDeckLengthChange(n)}
                     className={`min-h-[44px] rounded-xl px-2 text-center text-xs font-black transition-all ${
                       deckLength === n
-                        ? "bg-ink text-white shadow-sm"
-                        : "bg-transparent text-gray-500 hover:bg-white hover:text-ink"
+                        ? "bg-ink text-paper shadow-sm"
+                        : "bg-transparent text-gray-500 hover:bg-surface hover:text-ink"
                     }`}
                   >
                     <span className="block">{n === 5 ? "Quick" : "Full"}</span>
                     <span
                       className={`mt-0.5 block text-[10px] font-bold ${
-                        deckLength === n ? "text-white/60" : "text-gray-400"
+                        deckLength === n ? "text-paper/60" : "text-gray-400"
                       }`}
                     >
                       {n} cards
@@ -235,14 +235,14 @@ export default function ScenarioPicker({
                     onClick={() => onRoastIntensityChange(option.id)}
                     className={`min-h-[54px] rounded-xl px-2 text-center text-xs font-black transition-all ${
                       active
-                        ? "bg-ink text-white shadow-sm"
-                        : "bg-transparent text-gray-500 hover:bg-white hover:text-ink"
+                        ? "bg-ink text-paper shadow-sm"
+                        : "bg-transparent text-gray-500 hover:bg-surface hover:text-ink"
                     }`}
                   >
                     <span className="block">{option.label}</span>
                     <span
                       className={`mt-1 block text-[10px] font-bold ${
-                        active ? "text-white/60" : "text-gray-400"
+                        active ? "text-paper/60" : "text-gray-400"
                       }`}
                     >
                       {option.note}

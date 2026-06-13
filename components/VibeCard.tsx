@@ -224,7 +224,7 @@ export default function VibeCard({
         }
       }}
     >
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[30px] bg-white shadow-card-lg ring-1 ring-black/[0.04]">
+      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[30px] bg-surface shadow-card-lg ring-1 ring-black/[0.04]">
         <CardImagePanel
           cardId={card.id}
           visual={visual}

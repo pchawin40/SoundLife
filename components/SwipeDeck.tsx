@@ -353,9 +353,9 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
                 initial={{ opacity: 0, scale: 0.94, y: 18 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                className="absolute inset-0 flex flex-col items-center justify-center rounded-[28px] border border-gray-100 bg-white p-8 text-center shadow-card-lg"
+                className="absolute inset-0 flex flex-col items-center justify-center rounded-[28px] border border-gray-100 bg-surface p-8 text-center shadow-card-lg"
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-ink text-sm font-black uppercase tracking-[0.18em] text-white">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-ink text-sm font-black uppercase tracking-[0.18em] text-paper">
                   SL
                 </div>
                 <p className="mt-4 text-sm font-black uppercase tracking-[0.2em] text-brand-amber">
@@ -424,7 +424,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
             onClick={handleUndo}
             disabled={!canUndo || isTransitioning}
             aria-label="Undo last swipe"
-            className="flex min-h-[56px] items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-black text-gray-400 transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-30"
+            className="flex min-h-[56px] items-center justify-center rounded-full border border-gray-200 bg-surface text-xs font-black text-gray-400 transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-30"
             title="Undo"
           >
             ↩

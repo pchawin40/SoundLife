@@ -59,7 +59,7 @@ function AudioPreview({ previewUrl }: { previewUrl: string }) {
           type="button"
           onClick={handleToggle}
           disabled={state === "loading"}
-          className="min-h-[38px] rounded-full bg-ink px-4 text-xs font-black text-white transition-colors hover:bg-gray-800 active:scale-95 disabled:opacity-60"
+          className="min-h-[38px] rounded-full bg-ink px-4 text-xs font-black text-paper transition-colors hover:bg-gray-800 active:scale-95 disabled:opacity-60"
         >
           {state === "loading"
             ? "Loading…"
@@ -67,7 +67,7 @@ function AudioPreview({ previewUrl }: { previewUrl: string }) {
               ? "⏸ Pause"
               : "▶ Preview"}
         </button>
-        <span className="rounded-full border border-pink-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-pink-600">
+        <span className="rounded-full border border-pink-200 bg-surface px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-pink-600">
           iTunes preview
         </span>
       </div>
@@ -114,7 +114,7 @@ export default function SongCard({ song, rank, resultIdentity, note }: SongCardP
   const reason = note ?? `A strong fit for ${resultIdentity ?? "this result"}.`;
 
   return (
-    <article className="rounded-[20px] border border-gray-100 bg-white p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-lg sm:p-5">
+    <article className="rounded-[20px] border border-gray-100 bg-surface p-4 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-lg sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-black tabular-nums text-gray-400">
           {String(rank).padStart(2, "0")}
