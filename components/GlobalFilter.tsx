@@ -24,13 +24,13 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
   const active = GLOBAL_FILTERS.find((f) => f.id === value);
 
   return (
-    <div>
+    <div className="w-full min-w-0 overflow-hidden">
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
         Tune the world
       </p>
 
       {/* Search input */}
-      <div className="mt-2.5 relative">
+      <div className="relative mt-2.5 min-w-0">
         <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
           <span className="text-gray-400 text-sm">🔍</span>
         </div>
@@ -40,7 +40,7 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search language, genre, or region..."
-          className="w-full rounded-2xl border border-gray-200 bg-white py-2.5 pl-8 pr-4 text-sm font-medium text-ink placeholder-gray-400 outline-none transition-colors focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20"
+          className="block w-full min-w-0 rounded-2xl border border-gray-200 bg-white py-2.5 pl-8 pr-10 text-sm font-medium text-ink placeholder-gray-400 outline-none transition-colors focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20"
         />
         {query && (
           <button
@@ -54,39 +54,43 @@ export default function GlobalFilter({ value, onChange }: GlobalFilterProps) {
       </div>
 
       {/* Filter chips */}
-      <div
-        className="-mx-5 mt-2.5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        role="radiogroup"
-        aria-label="Language filter"
-      >
-        {filtered.map((filter) => {
-          const isActive = filter.id === value;
-          return (
-            <button
-              key={filter.id}
-              type="button"
-              role="radio"
-              aria-checked={isActive}
-              onClick={() => { onChange(filter.id); setQuery(""); }}
-              className={`min-h-[38px] shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-bold transition-all ${
-                isActive
-                  ? "border-brand-teal bg-brand-teal text-white shadow-sm"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-brand-teal/40 hover:text-brand-teal"
-              }`}
-            >
-              {filter.flag} {filter.label}
-            </button>
-          );
-        })}
-        {filtered.length === 0 && (
-          <p className="py-2 text-sm text-gray-400">No matches for "{query}"</p>
-        )}
+      <div className="relative mt-2.5 min-w-0 overflow-hidden">
+        <div
+          className="flex max-w-full gap-2 overflow-x-auto pb-2 pr-7 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 sm:pr-0 sm:[mask-image:none] [&::-webkit-scrollbar]:hidden"
+          role="radiogroup"
+          aria-label="Language filter"
+        >
+          {filtered.map((filter) => {
+            const isActive = filter.id === value;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                role="radio"
+                aria-checked={isActive}
+                onClick={() => { onChange(filter.id); setQuery(""); }}
+                className={`min-h-[38px] max-w-[180px] shrink-0 whitespace-nowrap rounded-full border px-4 text-sm font-bold transition-all sm:max-w-none ${
+                  isActive
+                    ? "border-brand-teal bg-brand-teal text-white shadow-sm"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-brand-teal/40 hover:text-brand-teal"
+                }`}
+              >
+                <span className="block truncate">
+                  {filter.flag} {filter.label}
+                </span>
+              </button>
+            );
+          })}
+          {filtered.length === 0 && (
+            <p className="py-2 text-sm text-gray-400">No matches for "{query}"</p>
+          )}
+        </div>
       </div>
 
       {/* Active filter summary */}
       {active && active.id !== "global" && (
-        <div className="mt-2.5 flex items-center gap-2">
-          <span className="text-xs font-semibold text-brand-teal">
+        <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-2">
+          <span className="min-w-0 text-xs font-semibold leading-5 text-brand-teal">
             ✓ Boosting {active.flag} {active.label} songs — blends globally so results never empty
           </span>
           <button

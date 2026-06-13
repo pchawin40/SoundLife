@@ -9,13 +9,21 @@ import SwipeDeck from "@/components/SwipeDeck";
 import { FALLBACK_CATALOG } from "@/lib/catalog.fallback";
 import { loadCatalog } from "@/lib/catalog";
 import { buildDeck } from "@/lib/engine";
-import type { Catalog, FilterId, Scenario, Step, VibeCardData } from "@/lib/types";
+import type {
+  Catalog,
+  FilterId,
+  RoastIntensity,
+  Scenario,
+  Step,
+  VibeCardData,
+} from "@/lib/types";
 
 export default function Home() {
   const router = useRouter();
   const [catalog, setCatalog] = useState<Catalog>(FALLBACK_CATALOG);
   const [step, setStep] = useState<Step>("landing");
   const [filter, setFilter] = useState<FilterId>("global");
+  const [roastIntensity, setRoastIntensity] = useState<RoastIntensity>("accurate");
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [deck, setDeck] = useState<VibeCardData[]>([]);
 
@@ -29,13 +37,19 @@ export default function Home() {
     setStep("swipe");
   };
 
-  const finishSwipe = (liked: VibeCardData[], superVibed: VibeCardData[]) => {
+  const finishSwipe = (
+    liked: VibeCardData[],
+    superVibed: VibeCardData[],
+    disliked: VibeCardData[]
+  ) => {
     if (!scenario) return;
     const params = new URLSearchParams();
     params.set("s", scenario.id);
     if (liked.length > 0) params.set("cards", liked.map((c) => c.id).join(","));
     if (superVibed.length > 0) params.set("super", superVibed.map((c) => c.id).join(","));
+    if (disliked.length > 0) params.set("nope", disliked.map((c) => c.id).join(","));
     if (filter !== "global") params.set("lang", filter);
+    if (roastIntensity !== "accurate") params.set("tone", roastIntensity);
     router.push(`/result?${params.toString()}`);
   };
 
@@ -86,7 +100,9 @@ export default function Home() {
               <ScenarioPicker
                 scenarios={catalog.scenarios}
                 filter={filter}
+                roastIntensity={roastIntensity}
                 onFilterChange={setFilter}
+                onRoastIntensityChange={setRoastIntensity}
                 onSelect={pickScenario}
               />
             )}

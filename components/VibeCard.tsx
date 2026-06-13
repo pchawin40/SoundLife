@@ -10,14 +10,17 @@ interface VibeCardProps {
   stackPosition: number;
   onSwipe: (direction: 1 | -1 | 2) => void;
   partyMode?: boolean;
+  isLocked?: boolean;
 }
 
-const SWIPE_OFFSET = 112;
-const SWIPE_VELOCITY = 760;
+const SWIPE_OFFSET = 138;
+const SWIPE_VELOCITY = 920;
+const SUPER_OFFSET = 142;
+const SUPER_VELOCITY = 920;
 
-const STACK_TILT = [0, -2.4, 2.2, -1.2];
-const STACK_X = [0, -18, 20, -6];
-const STACK_Y = [0, 18, 36, 50];
+const STACK_TILT = [0, -1.5, 1.4, -0.8];
+const STACK_X = [0, -14, 16, -4];
+const STACK_Y = [0, 16, 32, 46];
 
 const TYPE_LABELS: Record<CardType, string> = {
   lifestyle: "Lifestyle",
@@ -42,11 +45,11 @@ const TYPE_LABEL_COLORS: Record<CardType, string> = {
 const cardVariants = {
   enter: { scale: 0.9, y: 34, opacity: 0 },
   exit: (direction: 1 | -1 = 1) => ({
-    x: direction * 620,
-    y: -22,
-    rotate: direction * 8,
+    x: direction * 660,
+    y: -18,
+    rotate: direction * 5,
     opacity: 0,
-    transition: { duration: 0.44, ease: "easeOut" as const },
+    transition: { duration: 0.56, ease: "easeOut" as const },
   }),
 };
 
@@ -71,14 +74,15 @@ export default function VibeCard({
   stackPosition,
   onSwipe,
   partyMode = false,
+  isLocked = false,
 }: VibeCardProps) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotate = useTransform(x, [-360, 360], [-7.5, 7.5]);
-  const likeOpacity = useTransform(x, [60, 180], [0, 1]);
-  const nopeOpacity = useTransform(x, [-180, -60], [1, 0]);
-  const superOpacity = useTransform(y, [-180, -72], [1, 0]);
-  const stickerScale = useTransform(x, [-280, 0, 280], [1.04, 0.92, 1.04]);
+  const rotate = useTransform(x, [-360, 360], [-5.5, 5.5]);
+  const likeOpacity = useTransform(x, [80, 210], [0, 1]);
+  const nopeOpacity = useTransform(x, [-210, -80], [1, 0]);
+  const superOpacity = useTransform(y, [-210, -90], [1, 0]);
+  const stickerScale = useTransform(x, [-300, 0, 300], [1.03, 0.94, 1.03]);
 
   const isTop = stackPosition === 0;
   const visual = resolveVibeVisual(card);
@@ -113,15 +117,16 @@ export default function VibeCard({
       initial="enter"
       animate={stackAnimation}
       exit="exit"
-      drag={isTop ? true : false}
+      drag={isTop && !isLocked ? true : false}
       dragSnapToOrigin
-      dragElastic={0.26}
+      dragElastic={0.2}
       dragMomentum={false}
-      dragTransition={{ bounceStiffness: 260, bounceDamping: 34 }}
-      dragConstraints={{ left: -360, right: 360, top: -220, bottom: 140 }}
-      whileDrag={{ scale: 1.015 }}
+      dragTransition={{ bounceStiffness: 230, bounceDamping: 36 }}
+      dragConstraints={{ left: -360, right: 360, top: -230, bottom: 130 }}
+      whileDrag={isLocked ? undefined : { scale: 1.01 }}
       onDragEnd={(_, info) => {
-        if (info.offset.y < -112 || info.velocity.y < -760) {
+        if (isLocked || !isTop) return;
+        if (info.offset.y < -SUPER_OFFSET || info.velocity.y < -SUPER_VELOCITY) {
           onSwipe(2);
         } else if (info.offset.x > SWIPE_OFFSET || info.velocity.x > SWIPE_VELOCITY) {
           onSwipe(1);
@@ -156,9 +161,9 @@ export default function VibeCard({
         </div>
 
         {/* Bottom content */}
-        <div className="flex h-[32%] flex-col items-start justify-between gap-3 px-6 pb-9 pt-5 text-left">
-          <div>
-            <h3 className="text-[26px] font-black leading-[1.02] tracking-tight text-gray-950 sm:text-[28px]">
+        <div className="flex h-[32%] min-h-0 flex-col items-start justify-between gap-2.5 px-5 pb-9 pt-4 text-left sm:px-6 sm:pt-5">
+          <div className="min-h-0 w-full">
+            <h3 className="line-clamp-2 text-[24px] font-black leading-[1.02] tracking-tight text-gray-950 sm:text-[28px]">
               {card.title}
             </h3>
             <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-gray-500">
@@ -166,7 +171,7 @@ export default function VibeCard({
             </p>
           </div>
 
-          <div className="flex w-full flex-wrap gap-1.5">
+          <div className="flex max-h-[58px] w-full flex-wrap gap-1.5 overflow-hidden">
             {tags.map((tag) => (
               <span
                 key={tag}

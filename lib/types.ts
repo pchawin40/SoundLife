@@ -144,8 +144,50 @@ export interface TraitStat {
   percent: number;
 }
 
+export type RoastIntensity = "soft" | "accurate" | "roast";
+
+export type ShareCardVariant = "identity" | "roast" | "aux";
+
+export interface ArchetypeColorTheme {
+  background: string;
+  accent: string;
+  text: string;
+}
+
+export interface SoundLifeArchetype {
+  id: string;
+  name: string;
+  requiredTraits: Trait[];
+  preferredScenarios: ScenarioId[];
+  preferredGenres: string[];
+  blockedGenres: string[];
+  preferredLanguages: string[];
+  diagnosis: string;
+  softCopy: string;
+  accurateCopy: string;
+  roastCopy: string;
+  bestFor: string;
+  dangerousAround: string;
+  shareCaption: string;
+  colorTheme: ArchetypeColorTheme;
+  emoji: string;
+  sticker: string;
+}
+
+export interface ResultMatchReason {
+  vibedWith: string[];
+  rejected: string;
+  strongestSignal: string;
+  strongestSignalType: "trait" | "genre" | "language";
+}
+
 export interface ResultData {
   identity: string;
+  archetype: SoundLifeArchetype;
+  roastIntensity: RoastIntensity;
+  resultCopy: string;
+  whyMatched: ResultMatchReason;
+  vibeTags: string[];
   matchPercent: number;
   traits: TraitStat[];
   songs: Song[];

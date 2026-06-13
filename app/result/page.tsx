@@ -10,9 +10,16 @@ import { logResultEvent } from "@/lib/analytics";
 import { FALLBACK_CATALOG } from "@/lib/catalog.fallback";
 import { loadCatalog } from "@/lib/catalog";
 import { computeResults } from "@/lib/engine";
-import type { Catalog, FilterId, VibeCardData } from "@/lib/types";
+import type { Catalog, FilterId, RoastIntensity, VibeCardData } from "@/lib/types";
 
 const BUILDING_DELAY_MS = 1600;
+const ROAST_INTENSITIES: RoastIntensity[] = ["soft", "accurate", "roast"];
+
+function parseRoastIntensity(value: string | null): RoastIntensity {
+  return ROAST_INTENSITIES.includes(value as RoastIntensity)
+    ? (value as RoastIntensity)
+    : "accurate";
+}
 
 /**
  * Shareable, query-param based result page (static-export friendly):
@@ -55,8 +62,13 @@ function ResultContent() {
     () => (params.get("super") ?? "").split(",").filter(Boolean),
     [params]
   );
+  const dislikedIds = useMemo(
+    () => (params.get("nope") ?? "").split(",").filter(Boolean),
+    [params]
+  );
   const lang = (params.get("lang") ?? "global") as FilterId;
   const region = params.get("region");
+  const roastIntensity = parseRoastIntensity(params.get("tone"));
 
   const scenario = catalog.scenarios.find((s) => s.id === scenarioId) ?? null;
 
@@ -69,11 +81,16 @@ function ResultContent() {
     const superVibed = superIds
       .map((id) => byId.get(id))
       .filter((c): c is VibeCardData => Boolean(c));
+    const disliked = dislikedIds
+      .map((id) => byId.get(id))
+      .filter((c): c is VibeCardData => Boolean(c));
     return computeResults(catalog, scenario, liked, superVibed, {
       filterId: lang,
       region,
+      disliked,
+      roastIntensity,
     });
-  }, [catalog, scenario, cardIds, superIds, lang, region]);
+  }, [catalog, scenario, cardIds, superIds, dislikedIds, lang, region, roastIntensity]);
 
   useEffect(() => {
     if (!revealed || !result || logged.current) return;

@@ -31,32 +31,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function identityCopy(result: ResultData, scenarioLabel?: string): string {
-  const topTrait = result.traits[0]?.trait;
-  if (result.filterId !== "global") {
-    return "Global heat with late-night confidence. The playlist keeps the flavor specific without making the room smaller.";
-  }
-  if (result.scenarioId === "gym") {
-    return "Gym villain arc unlocked. This is high-stakes cardio for people who treat the final rep like a plot twist.";
-  }
-  if (result.scenarioId === "sad") {
-    return "You're not sad. You're cinematic. The feelings are real, but the lighting is excellent.";
-  }
-  if (topTrait === "tempo" || result.identity.toLowerCase().includes("heart rate")) {
-    return "This sounds like walking fast and ignoring texts. Efficient, focused, slightly dangerous.";
-  }
-  if (topTrait === "confidence" || topTrait === "cinematic") {
-    return "Your music taste has main character damage. The soundtrack arrived before the character development did.";
-  }
-  if (topTrait === "romance") {
-    return "Lovesick, but make it a full cinematic score. The feelings are real and the tracklist knows it.";
-  }
-  if (result.superVibeCount > 0) {
-    return `${result.superVibeCount} super vibe${result.superVibeCount > 1 ? "s" : ""} registered. This result knows exactly what you're about — and agreed with you.`;
-  }
-  return `This is ${scenarioLabel?.toLowerCase() ?? "the moment"} music with a point of view: specific enough to screenshot, broad enough to actually play.`;
-}
-
 function groupSongs(songs: Song[]): SongGroup[] {
   return (
     [
@@ -204,7 +178,6 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
   const scenario = catalog.scenarios.find((s) => s.id === result.scenarioId);
   const filter = getFilter(result.filterId);
   const verdict = TRAIT_VERDICTS[result.traits[0].trait];
-  const copy = identityCopy(result, scenario?.label);
   const songGroups = useMemo(() => groupSongs(result.songs), [result.songs]);
   const topTrait = TRAIT_META[result.traits[0].trait];
 
@@ -260,7 +233,10 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
               {result.identity}
             </h1>
             <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-gray-600">
-              {copy}
+              {result.archetype.diagnosis}
+            </p>
+            <p className="mt-3 max-w-2xl text-base font-black leading-7 text-ink">
+              {result.resultCopy}
             </p>
 
             {/* Verdict */}
@@ -280,6 +256,39 @@ export default function ResultsScreen({ result, catalog, onRedo }: ResultsScreen
               {scenario?.label.toLowerCase()} energy, no extra seasoning.
             </p>
           )}
+
+          {/* Why this matched */}
+          <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-amber">
+              This is suspiciously accurate because...
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl bg-gray-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">
+                  You vibed with
+                </p>
+                <p className="mt-2 text-sm font-black leading-5 text-ink">
+                  {result.whyMatched.vibedWith.join(" + ")}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-gray-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">
+                  You rejected
+                </p>
+                <p className="mt-2 text-sm font-black leading-5 text-ink">
+                  {result.whyMatched.rejected}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-gray-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">
+                  Strongest signal
+                </p>
+                <p className="mt-2 text-sm font-black leading-5 text-ink">
+                  {result.whyMatched.strongestSignal}
+                </p>
+              </div>
+            </div>
+          </section>
 
           {/* CTA buttons */}
           <div className="mt-6 grid gap-3 sm:grid-cols-2">

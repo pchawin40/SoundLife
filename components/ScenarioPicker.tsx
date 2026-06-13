@@ -2,12 +2,14 @@
 
 import { motion } from "framer-motion";
 import GlobalFilter from "./GlobalFilter";
-import type { FilterId, Scenario, ScenarioId } from "@/lib/types";
+import type { FilterId, RoastIntensity, Scenario, ScenarioId } from "@/lib/types";
 
 interface ScenarioPickerProps {
   scenarios: Scenario[];
   filter: FilterId;
+  roastIntensity: RoastIntensity;
   onFilterChange: (id: FilterId) => void;
+  onRoastIntensityChange: (intensity: RoastIntensity) => void;
   onSelect: (scenario: Scenario) => void;
 }
 
@@ -52,9 +54,17 @@ const SCENARIO_ACCENTS: Record<ScenarioId, { accent: string; bg: string; prompt:
 export default function ScenarioPicker({
   scenarios,
   filter,
+  roastIntensity,
   onFilterChange,
+  onRoastIntensityChange,
   onSelect,
 }: ScenarioPickerProps) {
+  const roastOptions: Array<{ id: RoastIntensity; label: string; note: string }> = [
+    { id: "soft", label: "Soft", note: "gentle diagnosis" },
+    { id: "accurate", label: "Accurate", note: "call it clean" },
+    { id: "roast", label: "Roast me", note: "no mercy" },
+  ];
+
   return (
     <section className="mx-auto flex w-full max-w-5xl flex-1 flex-col py-2 lg:py-8">
       <motion.div
@@ -152,11 +162,56 @@ export default function ScenarioPicker({
         transition={{ duration: 0.35, delay: 0.32 }}
         className="mt-8 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
       >
-        <GlobalFilter value={filter} onChange={onFilterChange} />
-        <p className="mt-3 text-xs font-medium text-gray-400">
-          Optional: bias the final tracklist toward a language or scene.
-          Results never go empty — global songs backfill the rest.
-        </p>
+        <div className="grid min-w-0 gap-6 overflow-hidden lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)] lg:items-start">
+          <div className="min-w-0 overflow-hidden">
+            <GlobalFilter value={filter} onChange={onFilterChange} />
+            <p className="mt-3 text-xs font-medium text-gray-400">
+              Optional: bias the final tracklist toward a language or scene.
+              Results never go empty — global songs backfill the rest.
+            </p>
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
+              Result tone
+            </p>
+            <div
+              className="mt-2.5 grid grid-cols-3 gap-1.5 rounded-2xl border border-gray-200 bg-gray-50 p-1.5"
+              role="radiogroup"
+              aria-label="Result tone"
+            >
+              {roastOptions.map((option) => {
+                const active = roastIntensity === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => onRoastIntensityChange(option.id)}
+                    className={`min-h-[54px] rounded-xl px-2 text-center text-xs font-black transition-all ${
+                      active
+                        ? "bg-ink text-white shadow-sm"
+                        : "bg-transparent text-gray-500 hover:bg-white hover:text-ink"
+                    }`}
+                  >
+                    <span className="block">{option.label}</span>
+                    <span
+                      className={`mt-1 block text-[10px] font-bold ${
+                        active ? "text-white/60" : "text-gray-400"
+                      }`}
+                    >
+                      {option.note}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs font-medium text-gray-400">
+              Choose how directly SoundLife is allowed to talk about you.
+            </p>
+          </div>
+        </div>
       </motion.div>
     </section>
   );

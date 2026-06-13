@@ -10,7 +10,11 @@ import type { Scenario, VibeCardData } from "@/lib/types";
 interface SwipeDeckProps {
   scenario: Scenario;
   deck: VibeCardData[];
-  onComplete: (liked: VibeCardData[], superVibed: VibeCardData[]) => void;
+  onComplete: (
+    liked: VibeCardData[],
+    superVibed: VibeCardData[],
+    disliked: VibeCardData[]
+  ) => void;
 }
 
 interface Feedback {
@@ -25,6 +29,7 @@ interface SwipeHistoryEntry {
   index: number;
   liked: VibeCardData[];
   superVibed: VibeCardData[];
+  disliked: VibeCardData[];
   direction: 1 | -1 | 2;
 }
 
@@ -44,6 +49,8 @@ const DONE_QUIPS = [
   "Computing your entire personality via vibes.",
 ];
 
+const FINISH_DELAY_MS = 820;
+
 function getProgressQuip(completed: number, total: number): string {
   if (completed === 0) return "Swipe right on what feels true.";
   const pct = completed / total;
@@ -59,11 +66,14 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState<VibeCardData[]>([]);
   const [superVibed, setSuperVibed] = useState<VibeCardData[]>([]);
+  const [disliked, setDisliked] = useState<VibeCardData[]>([]);
   const [history, setHistory] = useState<SwipeHistoryEntry[]>([]);
   const [lastDirection, setLastDirection] = useState<1 | -1>(1);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [partyMode, setPartyMode] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const finishTimer = useRef<number | null>(null);
+  const transitionLock = useRef(false);
 
   const done = index >= deck.length;
   const completedCount = Math.min(index, deck.length);
@@ -78,9 +88,12 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
 
   const handleSwipe = useCallback(
     (direction: 1 | -1 | 2) => {
+      if (transitionLock.current) return;
       if (index >= deck.length) return;
 
       clearFinishTimer();
+      transitionLock.current = true;
+      setIsTransitioning(true);
       const card = deck[index];
       const isLike = direction === 1 || direction === 2;
       const isSuper = direction === 2;
@@ -88,14 +101,16 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
 
       const nextLiked = isLike ? [...liked, card] : liked;
       const nextSuperVibed = isSuper ? [...superVibed, card] : superVibed;
+      const nextDisliked = isNope ? [...disliked, card] : disliked;
 
       setHistory((items) => [
         ...items,
-        { index, liked, superVibed, direction },
+        { index, liked, superVibed, disliked, direction },
       ]);
       setLastDirection(direction === -1 ? -1 : 1);
       setLiked(nextLiked);
       setSuperVibed(nextSuperVibed);
+      setDisliked(nextDisliked);
 
       if (isSuper) {
         setFeedback({
@@ -125,22 +140,25 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
       setIndex(next);
       if (next >= deck.length) {
         finishTimer.current = window.setTimeout(
-          () => onComplete(nextLiked, nextSuperVibed),
-          680
+          () => onComplete(nextLiked, nextSuperVibed, nextDisliked),
+          FINISH_DELAY_MS
         );
       }
     },
-    [clearFinishTimer, deck, index, liked, superVibed, onComplete]
+    [clearFinishTimer, deck, disliked, index, liked, superVibed, onComplete]
   );
 
   const handleUndo = useCallback(() => {
     const previous = history[history.length - 1];
     if (!previous) return;
     clearFinishTimer();
+    transitionLock.current = false;
+    setIsTransitioning(false);
     setHistory((items) => items.slice(0, -1));
     setIndex(previous.index);
     setLiked(previous.liked);
     setSuperVibed(previous.superVibed);
+    setDisliked(previous.disliked);
     setLastDirection(previous.direction === 1 ? -1 : 1);
     setFeedback(null);
   }, [clearFinishTimer, history]);
@@ -168,6 +186,10 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
 
   const progressQuip = getProgressQuip(completedCount, deck.length);
   const doneQuip = DONE_QUIPS[Math.floor(Math.random() * DONE_QUIPS.length)];
+  const releaseTransition = useCallback(() => {
+    transitionLock.current = false;
+    setIsTransitioning(false);
+  }, []);
 
   return (
     <section className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 py-2 lg:grid-cols-[0.82fr_1.18fr] lg:gap-12 lg:py-6">
@@ -266,8 +288,8 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
 
       {/* Card area */}
       <div className="lg:self-center">
-        <div className="relative mx-auto h-[520px] w-[86vw] max-w-[360px] flex-shrink-0 sm:h-[540px] sm:max-w-[390px] lg:h-[560px] lg:w-[410px] lg:max-w-[410px]">
-          <AnimatePresence custom={lastDirection}>
+        <div className="relative mx-auto h-[min(540px,68dvh)] min-h-[440px] w-[88vw] max-w-[380px] flex-shrink-0 sm:h-[560px] sm:max-w-[400px] lg:h-[590px] lg:w-[430px] lg:max-w-[430px]">
+          <AnimatePresence custom={lastDirection} onExitComplete={releaseTransition}>
             {deck.slice(index, index + 4).map((card, i) => (
               <VibeCard
                 key={card.id}
@@ -275,6 +297,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
                 stackPosition={i}
                 onSwipe={handleSwipe}
                 partyMode={partyMode}
+                isLocked={isTransitioning}
               />
             ))}
           </AnimatePresence>
@@ -307,6 +330,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
                   <button
                     type="button"
                     onClick={handleUndo}
+                    disabled={isTransitioning}
                     className="mt-6 min-h-[44px] rounded-full border border-gray-200 px-5 text-sm font-bold text-gray-600 transition-colors hover:bg-gray-50"
                   >
                     Undo last swipe
@@ -343,11 +367,11 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
         </div>
 
         {/* Action buttons */}
-        <div className="mx-auto mt-6 grid w-[86vw] max-w-[360px] grid-cols-[1fr_56px_56px_1fr] items-center gap-2 sm:max-w-[390px] lg:max-w-[410px]">
+        <div className="mx-auto mt-6 grid w-[88vw] max-w-[380px] grid-cols-[1fr_56px_56px_1fr] items-center gap-2 sm:max-w-[400px] lg:max-w-[430px]">
           <button
             type="button"
             onClick={() => handleSwipe(-1)}
-            disabled={done}
+            disabled={done || isTransitioning}
             className="flex min-h-[56px] items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 text-sm font-black text-red-500 transition-all hover:bg-red-100 active:scale-95 disabled:opacity-40"
           >
             ← Nope
@@ -355,7 +379,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
           <button
             type="button"
             onClick={handleUndo}
-            disabled={!canUndo}
+            disabled={!canUndo || isTransitioning}
             aria-label="Undo last swipe"
             className="flex min-h-[56px] items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-black text-gray-400 transition-all hover:bg-gray-50 active:scale-95 disabled:opacity-30"
             title="Undo"
@@ -365,7 +389,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
           <button
             type="button"
             onClick={() => handleSwipe(2)}
-            disabled={done}
+            disabled={done || isTransitioning}
             aria-label="Super Vibe"
             className="flex min-h-[56px] items-center justify-center rounded-full border border-yellow-300 bg-yellow-50 text-lg font-black text-yellow-600 transition-all hover:bg-yellow-100 active:scale-95 disabled:opacity-40"
             title="Super Vibe"
@@ -375,7 +399,7 @@ export default function SwipeDeck({ scenario, deck, onComplete }: SwipeDeckProps
           <button
             type="button"
             onClick={() => handleSwipe(1)}
-            disabled={done}
+            disabled={done || isTransitioning}
             className="flex min-h-[56px] items-center justify-center rounded-full bg-brand-teal px-4 text-sm font-black text-white shadow-card transition-all hover:bg-brand-tealSoft active:scale-95 disabled:opacity-40"
           >
             Like →
